@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نقلي | Naqli</title>
+<scriptstype="module"src=./firebase.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Tajawal, Arial}
+body{background:#f5f7fa;color:#222}
+header{background:#0a3d62;color:#fff;padding:12px;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:18px;cursor:pointer}
+nav button{margin:2px;padding:6px 10px;border:0;border-radius:6px;background:#fff;color:#0a3d62;cursor:pointer;font-weight:bold}
+.tab{display:none;padding:12px}
+.tab.active{display:block}
+.card{background:#fff;border-radius:12px;padding:12px;margin:8px 0;box-shadow:0 2px 6px rgba(0,0,0,0.08)}
+.green{background:#27ae60;color:#fff;border:0;padding:12px;width:100%;border-radius:10px;font-size:16px;font-weight:bold;cursor:pointer}
+.small{padding:6px 10px;border-radius:6px;border:0;cursor:pointer;color:#fff;font-weight:bold}
+input,select,textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;margin:5px 0}
+.vehicle-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.vehicle-option{border:2px solid #ddd;border-radius:12px;padding:14px;text-align:center;cursor:pointer;background:#fff;font-weight:bold}
+.vehicle-option.selected{border-color:#0a3d62;background:#e3f2fd}
+#map{height:320px;border-radius:12px;margin:10px 0}
+.quick-call{background:#27ae60;color:#fff;padding:14px;border-radius:12px;text-align:center;margin-bottom:10px;cursor:pointer}
+.hidden{display:none}
+.badge{background:#0a3d62;color:#fff;padding:2px 8px;border-radius:12px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+<h1 id="logo">🚚 نقلي</h1>
+<nav>
+<button onclick="showTab('customer')">طلب جديد</button>
+<button id="driverTabBtn" onclick="showTab('driver')" style="display:none">أنا سائق</button>
+<button id="ownerTabBtn" onclick="showTab('owner')" style="display:none;background:#f1c40f">المالك 👑</button>
+</nav>
+</header>
+
+<div id="customer" class="tab active">
+<div class="quick-call" onclick="window.location.href='tel:+22246000000'"><b>📞 مستعجل؟ اتصل بالمالك</b></div>
+<h3>1- اختر وسيلة النقل</h3>
+<div id="vehicleGrid" class="vehicle-grid"></div>
+<div class="card">
+<input id="custName" placeholder="الاسم الكامل *">
+<input id="custPhone" placeholder="رقم الهاتف *">
+<select id="goodsType"><option value="">نوع البضاعة *</option><option>أثاث منزلي</option><option>مواد غذائية</option><option>مستندات</option><option>أجهزة</option><option>مواد بناء</option><option>أخرى</option></select>
+<textarea id="goodsDesc" placeholder="وصف البضاعة بالتفصيل *"></textarea>
+<select id="custMouqataa"><option value="">مقاطعة الاستلام - نواكشوط *</option><option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>دار النعيم</option><option>الرياض</option><option>الميناء</option><option>السبخة</option></select>
+<input id="custAddress" placeholder="الحي / تفاصيل العنوان">
+<input id="destSearch" placeholder="وجهة التوصيل - المقاطعة أو الولاية">
+<div id="priceInfo" style="background:#e3f2fd;padding:8px;border-radius:8px;margin:5px 0">💰 السعر: سيحسب تلقائيا</div>
+</div>
+<div class="card"><h4>3- حدد موقعك على الخريطة (في الأخير) *</h4><div id="map"></div></div>
+<button class="green" onclick="saveOrder()">✅إرسال الطلب </button>
+<div id="custMsg"></div>
+<div id="custAcceptedInfo" class="card hidden" style="border:2px solid #27ae60;background:#e8f5e9"></div>
+<button class="small" style="background:#0a3d62;margin-top:10px" onclick="checkMyOrder()">🔍 هل وافق سائق على طلبي؟ اضغط هنا</button>
+</div>
+
+<div id="driver" class="tab">
+<div class="card" id="driverLoginCard">
+<h3>دخول السائقين</h3>
+<input id="driverPhoneLogin" placeholder="رقم هاتفك">
+<select id="driverVehicleFilter"><option value="">نوع سيارتك</option><option>تاكسي</option><option>واوا</option><option>شاحنة متوسطة 3 طن</option><option>شاحنة كبيرة 10 طن</option></select>
+<button class="green" onclick="driverLogin()">دخول</button>
+</div>
+<div id="driverOrders"></div>
+<div class="card"><h4>تسجيل سائق جديد</h4>
+<input id="dName" placeholder="الاسم"><input id="dPhone" placeholder="الهاتف"><input id="dIdNum" placeholder="رقم البطاقة NNI"><input id="dPlate" placeholder="رقم لوحة السيارة * مثال 1234-AB-00"><select id="dVehicle"><option>تاكسي</option><option>واوا</option><option>شاحنة متوسطة 3 طن</option><option>شاحنة كبيرة 10 طن</option></select>
+<button class="green" onclick="registerDriver()">إرسال</button><div id="driverMsg"></div></div>
+</div>
+
+<div id="owner" class="tab">
+<div class="card">
+<h3>👑 لوحة المالك - ترى كل شيء</h3>
+<input type="password" id="ownerPassInput" placeholder="كلمة السر naqli2026">
+<button class="small" style="background:#0a3d62" onclick="ownerLogin()">دخول</button>
+<button class="small" style="background:#e74c3c" onclick="ownerLogout()">إخفاء</button>
+</div>
+<div id="ownerContent" class="hidden">
+<div class="card"><h4>سائقون بانتظار الموافقة</h4><div id="ownerPendingDrivers"></div></div>
+<div class="card"><h4>📦 كل الطلبات</h4><div id="ownerAllOrders"></div></div>
+<div class="card"><h4>✅ السائقون المقبولون</h4><div id="ownerAllDrivers"></div></div>
+</div>
+</div>
+
+<script>
+let CONFIG={phone:"46000000",ownerPass:"naqli2026",mouqataas:["تفرغ زينة","لكصر","تيارت","توجنين","عرفات","دار النعيم","الرياض","الميناء","السبخة"],prices:{"داخل المقاطعة":{"تاكسي":1500,"واوا":4000,"شاحنة متوسطة 3 طن":6000,"شاحنة كبيرة 10 طن":10000},"بين مقاطعات نواكشوط":{"تاكسي":3000,"واوا":7000,"شاحنة متوسطة 3 طن":10000,"شاحنة كبيرة 10 طن":16000},"روصو":{"واوا":25000,"شاحنة متوسطة 3 طن":40000,"شاحنة كبيرة 10 طن":70000},"نواذيبو":{"واوا":35000,"شاحنة متوسطة 3 طن":60000,"شاحنة كبيرة 10 طن":100000},"كيفة":{"واوا":40000,"شاحنة متوسطة 3 طن":70000,"شاحنة كبيرة 10 طن":120000}}};
+let orders=JSON.parse(localStorage.getItem('naqly_orders')||'[]');
+let drivers=JSON.parse(localStorage.getItem('naqly_drivers')||'[]');
+let currentVehicle='واوا'; let shopLatLng=null; let map=null; let marker=null; let currentDriver=null;
+function showTab(id){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById(id).classList.add('active'); if(id=='customer') setTimeout(initMap,300);}
+function initVehicles(){let grid=document.getElementById('vehicleGrid'); grid.innerHTML=''; let icons={'تاكسي':'🚕','واوا':'🛻','شاحنة متوسطة 3 طن':'🚚','شاحنة كبيرة 10 طن':'🚛'}; Object.keys(icons).forEach(v=>{let d=document.createElement('div'); d.className='vehicle-option'+(v==currentVehicle?' selected':''); d.innerHTML=`${icons[v]}<br><b>${v}</b>`; d.onclick=()=>{currentVehicle=v; initVehicles(); calcPrice();}; grid.appendChild(d);});}
+function detectWilayaAndMouqataa(dest, originMouq){ if(!dest) return {type:"داخل المقاطعة", name: originMouq||"داخل المقاطعة"}; let a=dest.toLowerCase(); if(a.includes("روصو")) return {type:"روصو", name:"روصو"}; if(a.includes("نواذيبو")) return {type:"نواذيبو", name:"نواذيبو"}; if(a.includes("كيفة")) return {type:"كيفة", name:"كيفة"}; for(let m of CONFIG.mouqataas){ if(dest.includes(m)){ if(originMouq && originMouq!=m) return {type:"بين مقاطعات نواكشوط", name: originMouq+" → "+m}; else return {type:"داخل المقاطعة", name: m}; }} return {type:"داخل المقاطعة", name: originMouq||"داخل المقاطعة"}; }
+function calcPrice(){ let dest=document.getElementById('destSearch').value; let originM=document.getElementById('custMouqataa').value; let info=detectWilayaAndMouqataa(dest, originM); let price=(CONFIG.prices[info.type] && CONFIG.prices[info.type][currentVehicle]) || CONFIG.prices["داخل المقاطعة"][currentVehicle]; document.getElementById('priceInfo').innerHTML=`💰 السعر: <b>${price} MRU</b> - ${info.name} - ${currentVehicle} <span class="badge">${info.type}</span>`; return {price, info}; }
+function initMap(){ if(map) return; map=L.map('map').setView([18.0735,-15.9582],12); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); map.on('click', e=>{ shopLatLng=e.latlng; if(marker) map.removeLayer(marker); marker=L.marker(e.latlng).addTo(map); });}
+function saveOrder(){let n=document.getElementById('custName').value.trim(), p=document.getElementById('custPhone').value.trim(), gt=document.getElementById('goodsType').value, gd=document.getElementById('goodsDesc').value.trim(), mouq=document.getElementById('custMouqataa').value; if(!n||!p||!gt||!gd||!mouq||!shopLatLng) return alert("أكمل البيانات وحدد الخريطة"); let {price, info}=calcPrice(); let o={id:Date.now(), custName:n, phone:p, mouqataaOrigin:mouq, address:document.getElementById('custAddress').value, dest:document.getElementById('destSearch').value, destWilayaType:info.type, destWilayaName:info.name, lat:shopLatLng.lat, lng:shopLatLng.lng, vehicle:currentVehicle, goodsType:gt, goodsDesc:gd, price, status:'بانتظار موافقة المالك', assignedDrivers:[], acceptedBy:null, acceptedDriverPlate:null, acceptedDriverName:null, time:new Date().toLocaleString()}; orders.unshift(o); localStorage.setItem('naqly_orders', JSON.stringify(orders)); localStorage.setItem('lastOrderPhone', p); document.getElementById('custMsg').innerHTML=`<div style="background:#e8f5e9;padding:12px;border-radius:10px"><b>✅ تم يا ${n}!</b> - ${mouq} → ${info.name} - ${price} MRU</div>`; checkMyOrder(true);}
+function checkMyOrder(silent){
+  let phone=localStorage.getItem('lastOrderPhone') || prompt("أدخل رقم هاتفك:");
+  if(!phone){ if(!silent) alert("أدخل رقمك"); return; }
+  let my=orders.filter(o=>o.phone==phone);
+  if(my.length==0){ if(!silent) alert("لا يوجد طلب"); return; }
+  let last=my[0]; let box=document.getElementById('custAcceptedInfo');
+  if(last.acceptedBy){
+    box.classList.remove('hidden');
+    box.innerHTML=`<h3 style="color:#27ae60">✅ وافقت سيارة على طلبك!</h3>
+    <div style="background:#fff;padding:12px;border-radius:10px;border:2px dashed #000;margin:8px 0;text-align:center">
+    <div style="font-size:14px;color:#666">نوع السيارة</div><div style="font-size:20px;font-weight:bold">${last.vehicle}</div>
+    <div style="font-size:14px;color:#666;margin-top:8px">رقم اللوحة</div><div style="font-size:26px;font-weight:bold;letter-spacing:2px">${last.acceptedDriverPlate}</div>
+    </div>
+    <small>سيتصل بك المالك ${CONFIG.phone} - احتفظ باللوحة</small>`;
+  } else {
+    if(!silent){ box.classList.remove('hidden'); box.innerHTML=`<b>قيد الانتظار:</b> ${last.status}<br>${last.mouqataaOrigin} → ${last.destWilayaName} - ${last.price} MRU`; }
+  }
+}
+function registerDriver(){let n=document.getElementById('dName').value, p=document.getElementById('dPhone').value, idn=document.getElementById('dIdNum').value, plate=document.getElementById('dPlate').value.trim(), v=document.getElementById('dVehicle').value; if(!n||!p||!idn||!plate) return alert("أكمل البيانات - اللوحة إجبارية"); drivers.push({id:Date.now(), name:n, phone:p, idNumber:idn, plate:plate, vehicleType:v, status:'بانتظار الموافقة'}); localStorage.setItem('naqly_drivers', JSON.stringify(drivers)); document.getElementById('driverMsg').innerHTML='✅ تم الإرسال';}
+function driverLogin(){let ph=document.getElementById('driverPhoneLogin').value.trim(), ve=document.getElementById('driverVehicleFilter').value; let f=drivers.find(d=>d.phone==ph && d.vehicleType==ve && d.status=='مقبول'); if(!f) return alert("غير مسجل"); currentDriver=f; localStorage.setItem('currentDriver', JSON.stringify(f)); document.getElementById('driverLoginCard').classList.add('hidden'); renderDriverOrders();}
+function renderDriverOrders(){if(!currentDriver){let s=JSON.parse(localStorage.getItem('currentDriver')||'null'); if(s) currentDriver=s; else return;} let list=document.getElementById('driverOrders'); let filt=orders.filter(o=>o.vehicle==currentDriver.vehicleType && o.assignedDrivers && o.assignedDrivers.includes(currentDriver.id) &&!o.acceptedBy); let my=orders.filter(o=>o.acceptedBy==currentDriver.id); let h=`<div class="card"><h4>${currentDriver.name} - ${currentDriver.vehicleType} - لوحتك ${currentDriver.plate}</h4></div>`; h+=filt.map(o=>`<div class="card" style="border:2px solid #0a3d62"><b>${o.vehicle}</b> - ${o.mouqataaOrigin} → ${o.destWilayaName}<br>📦 ${o.goodsType}<br>💰 ${o.price} MRU<br><button class="green" onclick="driverAccepts(${o.id})">✅ أوافق - سيظهر للزبون: ${currentDriver.vehicleType} + ${currentDriver.plate} فقط</button></div>`).join('')||'<div class="card">لا يوجد طلبات</div>'; if(my.length>0){h+=`<div class="card" style="background:#e8f5e9">`+my.map(o=>`<div style="background:#fff;padding:10px;border-radius:8px;margin:6px 0"><b>${o.custName}</b> - ${o.phone}<br>📍 ${o.mouqataaOrigin} - ${o.address} -> ${o.destWilayaName}<br>📦 ${o.goodsDesc}<br>أنت أرسلت للزبون: ${currentDriver.vehicleType} - ${currentDriver.plate}<br><button class="small" style="background:#0a3d62" onclick="window.open('https://www.google.com/maps?q=${o.lat},${o.lng}')">📍 الخريطة</button></div>`).join('')+`</div>`;} list.innerHTML=h;}
+function driverAccepts(id){
+  orders=orders.map(o=>o.id==id?{...o,status:'تم قبول الطلب - سيارة '+currentDriver.vehicleType+' لوحة '+currentDriver.plate+' في الطريق', acceptedBy:currentDriver.id, acceptedDriverName:currentDriver.name, acceptedDriverPlate:currentDriver.plate}:o);
+  localStorage.setItem('naqly_orders', JSON.stringify(orders));
+  alert(`✅ تم! للزبون سيظهر فقط:\n🚚 ${currentDriver.vehicleType}\n🔢 ${currentDriver.plate}\nبدون اسمك أو رقمك`);
+  renderDriverOrders();
+}
+function ownerLogin(){if(document.getElementById('ownerPassInput').value!=CONFIG.ownerPass) return alert("خطأ"); document.getElementById('ownerContent').classList.remove('hidden'); renderOwnerPanel();}
+function ownerLogout(){localStorage.removeItem('isOwner'); document.getElementById('ownerTabBtn').style.display='none'; document.getElementById('ownerContent').classList.add('hidden'); showTab('customer');}
+function renderOwnerPanel(){
+document.getElementById('ownerPendingDrivers').innerHTML=drivers.filter(d=>d.status=='بانتظار الموافقة').map(d=>`<div style="border:1px solid #ddd;padding:8px;border-radius:8px;margin:4px 0"><b>${d.name}</b> - ${d.vehicleType} - لوحة: <b>${d.plate}</b> - ${d.phone}<br><button class="small green" onclick="approveDriver(${d.id})">قبول ✅</button> <button class="small" style="background:#e74c3c" onclick="rejectDriver(${d.id})">رفض</button></div>`).join('')||'لا يوجد';
+document.getElementById('ownerAllDrivers').innerHTML=drivers.filter(d=>d.status=='مقبول').map(d=>`<div>🚚 ${d.name} | ${d.phone} | ${d.vehicleType} | ${d.plate}</div>`).join('')||'لا يوجد';
+document.getElementById('ownerAllOrders').innerHTML=orders.map(o=>{
+let acc=drivers.find(d=>d.id==o.acceptedBy);
+let cnt=drivers.filter(d=>d.vehicleType==o.vehicle && d.status=='مقبول').length;
+return `<div style="border:2px solid ${o.acceptedBy?'#27ae60':'#e67e22'};background:#fff;padding:12px;border-radius:10px;margin:8px 0">
+<b>👤 ${o.custName}</b> - ${o.phone}<br>📍 من: <b>${o.mouqataaOrigin}</b> → <b>${o.destWilayaName}</b> <span class="badge">${o.destWilayaType}</span><br>🚚 ${o.vehicle} | 💰 ${o.price} MRU<br>📌 ${o.status}<br>${o.acceptedBy?`✅ وافق: ${acc.name} - ${acc.phone} - لوحته: ${o.acceptedDriverPlate} - <b>للزبان يظهر فقط: ${o.vehicle} + ${o.acceptedDriverPlate}</b>`:''}
+${!o.acceptedBy?`<br><button class="small green" onclick="ownerSendToDrivers(${o.id})">📤 إرسال لكل سائقي ${o.vehicle} (${cnt})</button>`:''}
+</div>`;
+}).join('')||'لا يوجد';
+}
+function ownerSendToDrivers(id){let o=orders.find(x=>x.id==id); let m=drivers.filter(d=>d.status=='مقبول' && d.vehicleType==o.vehicle); if(m.length==0) return alert("لا يوجد سائقين"); orders=orders.map(x=>x.id==id?{...x,status:'مرسل للسائقين - '+o.destWilayaName, assignedDrivers:m.map(d=>d.id)}:x); localStorage.setItem('naqly_orders', JSON.stringify(orders)); renderOwnerPanel();}
+function approveDriver(id){drivers=drivers.map(d=>d.id==id?{...d,status:'مقبول'}:d); localStorage.setItem('naqly_drivers', JSON.stringify(drivers)); renderOwnerPanel();}
+function rejectDriver(id){drivers=drivers.filter(d=>d.id!=id); localStorage.setItem('naqly_drivers', JSON.stringify(drivers)); renderOwnerPanel();}
+function checkOwnerAccess(){let p=new URLSearchParams(window.location.search); if(p.has('owner')||localStorage.getItem('isOwner')=='yes'){document.getElementById('ownerTabBtn').style.display='inline-block'; if(p.has('owner')) localStorage.setItem('isOwner','yes');} if(p.has('driver')||localStorage.getItem('isDriver')=='yes'){document.getElementById('driverTabBtn').style.display='inline-block';}}
+checkOwnerAccess();
+let clicks=0; document.getElementById('logo').onclick=function(){clicks++; if(clicks>=5){let pw=prompt("كلمة سر المالك:"); if(pw==CONFIG.ownerPass){document.getElementById('ownerTabBtn').style.display='inline-block'; localStorage.setItem('isOwner','yes'); alert("✅ ظهرت لوحة المالك لك فقط"); showTab('owner');} clicks=0;} setTimeout(()=>clicks=0,3000);};
+initVehicles(); initMap(); document.getElementById('destSearch').addEventListener('input', calcPrice); document.getElementById('custMouqataa').addEventListener('change', calcPrice);
+</script>
+</body>
+</html>
