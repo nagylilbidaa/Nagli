@@ -1,0 +1,11 @@
+
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>سائق نقلي</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-slate-50 p-3"><h1 class="font-black text-xl">تطبيق السائق</h1>
+<div class="flex gap-1 my-3 overflow-auto"><button onclick="f='all';render()" class="bg-black text-white px-3 py-1 rounded-full">الكل</button><button onclick="f='واو';render()" class="bg-gray-200 px-3 py-1 rounded-full">واو</button><button onclick="f='تكسي';render()" class="bg-gray-200 px-3 py-1 rounded-full">تكسي</button><button onclick="f='3 طن';render()" class="bg-gray-200 px-3 py-1 rounded-full">3 طن</button><button onclick="f='10+';render()" class="bg-gray-200 px-3 py-1 rounded-full">10+ طن</button></div>
+<audio id="ring" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio><div id="list" class="space-y-2"></div>
+<script type="module">import {db} from './firebase.js';import {collection,onSnapshot,updateDoc,doc} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+let all=[];let f='all';let first=true;const ring=document.getElementById('ring');
+onSnapshot(collection(db,"orders"),snap=>{if(!first){snap.docChanges().forEach(ch=>{if(ch.type==='added'&&ch.doc.data().status==='new'){ring.play(); if(Notification.permission==='granted') new Notification('🚚 طلب جديد: '+ch.doc.data().truckType);}});}first=false;all=[];snap.forEach(d=>all.push({id:d.id,...d.data()}));render();});
+window.render=()=>{list.innerHTML="";all.filter(o=>o.status==='accepted'&&(f==='all'||o.truckType.includes(f))).forEach(o=>{list.innerHTML+=`<div class="bg-white p-3 rounded-xl shadow"><b>${o.truckType}</b><div class="text-sm">${o.from}→${o.to} - ${o.phone}</div><div class="flex gap-2 mt-2"><a href="tel:${o.phone}" class="bg-black text-white flex-1 text-center py-2 rounded-xl">اتصال</a><button onclick="done('${o.id}')" class="bg-white border flex-1 py-2 rounded-xl">تم التوصيل</button></div></div>`;});}
+window.done=async(id)=>{await updateDoc(doc(db,"orders",id),{status:"delivered"});};Notification.requestPermission();
+</script></body></html>
