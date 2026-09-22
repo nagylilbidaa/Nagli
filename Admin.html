@@ -1,0 +1,9 @@
+
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>لوحة نقلي</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-gray-100 p-3"><h1 class="font-black text-xl mb-3">لوحة التحكم - إحصائيات المركبات</h1><div class="grid grid-cols-2 gap-2 mb-4" id="stats"></div><div id="orders" class="space-y-2"></div>
+<script type="module">import {db} from './firebase.js';import {collection,onSnapshot,updateDoc,doc} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+onSnapshot(collection(db,"orders"),snap=>{let c={واو:0,تكسي:0,'3 طن':0,'10+':0};let html="";snap.forEach(d=>{const o=d.data();if(o.truckType.includes('واو'))c.واو++;else if(o.truckType.includes('تكسي'))c.تكسي++;else if(o.truckType.includes('3 طن'))c['3 طن']++;else c['10+']++; if(o.status!=='new')return; html+=`<div class="bg-white p-3 rounded-xl flex justify-between"><div><b>${o.truckType}</b><div class="text-xs">${o.from}→${o.to} | ${o.phone}</div></div><button onclick="acc('${d.id}')" class="bg-black text-white px-4 rounded-xl">قبول</button></div>`;});
+stats.innerHTML=`<div class="bg-cyan-300 p-3 rounded-xl"><b>واو ${c.واو}</b></div><div class="bg-blue-400 p-3 rounded-xl"><b>تكسي ${c.تكسي}</b></div><div class="bg-orange-300 p-3 rounded-xl"><b>3 طن ${c['3 طن']}</b></div><div class="bg-purple-400 p-3 rounded-xl"><b>10+ طن ${c['10+']}</b></div>`;orders.innerHTML=html;});
+window.acc=async(id)=>{await updateDoc(doc(db,"orders",id),{status:"accepted"});}
+</script></body></html>
+
