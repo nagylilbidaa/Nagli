@@ -1,11 +1,57 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>السائق</title>
+<style>input,select,button{width:100%;padding:10px;margin:5px 0} .card{border:1px solid #ccc;padding:10px;margin:10px 0;border-radius:8px}</style>
+</head><body>
+<div id="registerDiv">
+<h2>تسجيل سائق جديد</h2>
+<input id="dName" placeholder="اسم السائق"><input id="dPhone" placeholder="رقم هاتفه">
+<select id="dCarType"><option>تاكسي</option><option>واو</option><option>شاحنة 3 طن</option><option>شاحنة 10 طن</option></select>
+<input id="dPlate" placeholder="رقم اللوحة"><input id="dPhoto" type="file"><input id="dId" type="file">
+<button id="regBtn">إرسال للتسجيل</button>
+<p>ملاحظة: لا يمكن اعتمادك حتى يوافق المسؤول</p>
+</div>
 
-<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>سائق نقلي</title><script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-slate-50 p-3"><h1 class="font-black text-xl">تطبيق السائق</h1>
-<div class="flex gap-1 my-3 overflow-auto"><button onclick="f='all';render()" class="bg-black text-white px-3 py-1 rounded-full">الكل</button><button onclick="f='واو';render()" class="bg-gray-200 px-3 py-1 rounded-full">واو</button><button onclick="f='تكسي';render()" class="bg-gray-200 px-3 py-1 rounded-full">تكسي</button><button onclick="f='3 طن';render()" class="bg-gray-200 px-3 py-1 rounded-full">3 طن</button><button onclick="f='10+';render()" class="bg-gray-200 px-3 py-1 rounded-full">10+ طن</button></div>
-<audio id="ring" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio><div id="list" class="space-y-2"></div>
-<script type="module">import {db} from './firebase.js';import {collection,onSnapshot,updateDoc,doc} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-let all=[];let f='all';let first=true;const ring=document.getElementById('ring');
-onSnapshot(collection(db,"orders"),snap=>{if(!first){snap.docChanges().forEach(ch=>{if(ch.type==='added'&&ch.doc.data().status==='new'){ring.play(); if(Notification.permission==='granted') new Notification('🚚 طلب جديد: '+ch.doc.data().truckType);}});}first=false;all=[];snap.forEach(d=>all.push({id:d.id,...d.data()}));render();});
-window.render=()=>{list.innerHTML="";all.filter(o=>o.status==='accepted'&&(f==='all'||o.truckType.includes(f))).forEach(o=>{list.innerHTML+=`<div class="bg-white p-3 rounded-xl shadow"><b>${o.truckType}</b><div class="text-sm">${o.from}→${o.to} - ${o.phone}</div><div class="flex gap-2 mt-2"><a href="tel:${o.phone}" class="bg-black text-white flex-1 text-center py-2 rounded-xl">اتصال</a><button onclick="done('${o.id}')" class="bg-white border flex-1 py-2 rounded-xl">تم التوصيل</button></div></div>`;});}
-window.done=async(id)=>{await updateDoc(doc(db,"orders",id),{status:"delivered"});};Notification.requestPermission();
-</script></body></html>
+<div id="ordersDiv" style="display:none"><h2>الطلبات المتاحة</h2><div id="list"></div></div>
+
+<script type="module">
+import { db } from './firebase.js';
+import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+regBtn.onclick = async ()=>{
+  await addDoc(collection(db,"drivers"),{
+    dName:dName.value, dPhone:dPhone.value, dCarType:dCarType.value, dPlate:dPlate.value,
+    status:"pending", createdAt:serverTimestamp()
+  });
+  alert("تم إرسال طلبك للمسؤول");
+};
+
+// استمع للسائق المعتمد
+const driverPhone = localStorage.getItem("driverPhone") || prompt("أدخل رقم هاتفك للدخول");
+localStorage.setItem("driverPhone", driverPhone);
+
+onSnapshot(query(collection(db,"drivers"), where("dPhone","==",driverPhone), where("status","==","approved")), snap=>{
+  if(!snap.empty){ registerDiv.style.display="none"; ordersDiv.style.display="block"; loadOrders(); }
+});
+
+function loadOrders(){
+  onSnapshot(query(collection(db,"orders"), where("status","==","pending")), s=>{
+    list.innerHTML="";
+    s.forEach(d=>{
+      const o=d.data();
+      list.innerHTML+=`<div class="card">
+      <b>${o.goodsType}</b> - ${o.goodsDesc}<br>من ${o.fromW} (${o.fromZone}) إلى ${o.toW} (${o.toZone})<br>السيارة المطلوبة: ${o.carType}<br>المبلغ: ${o.price} أوقية
+      <button onclick="accept('${d.id}')">قبول الطلب</button></div>`;
+    });
+  });
+}
+window.accept = async (id)=>{
+  const driverSnap = await (await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js")).getDocs(query(collection(db,"drivers"), where("dPhone","==",driverPhone)));
+  let driverData = {};
+  driverSnap.forEach(x=>driverData=x.data());
+  await updateDoc(doc(db,"orders",id),{status:"accepted", driverName:driverData.dName, driverPhone:driverData.dPhone, driverCar:driverData.dCarType, driverPlate:driverData.dPlate});
+  alert("قبلت الطلب، الآن يمكنك رؤية رقم الزبون");
+  // اعادة تحميل ليرى رقم الهاتف
+  onSnapshot(doc(db,"orders",id), ds=>{ const o=ds.data(); list.innerHTML=`<div class="card">تم القبول<br>رقم الزبون: ${o.cPhone}<br>اتصل به الآن</div>`; });
+}
+</script>
+</body></html>
