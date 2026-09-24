@@ -1,9 +1,34 @@
+<!DOCTYPE html>
+<html dir="rtl"><head><meta charset="UTF-8"><title>لوحة التحكم</title>
+<style>table{width:100%;border-collapse:collapse}td,th{border:1px solid #ccc;padding:8px}button{padding:5px 10px}</style>
+</head><body>
+<h2>طلبات السائقين المعلقة</h2><div id="drivers"></div>
+<h2>طلبات الزبائن الحية - ربط بالسائق المعتمد</h2><div id="orders"></div>
 
-<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>لوحة نقلي</title><script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-gray-100 p-3"><h1 class="font-black text-xl mb-3">لوحة التحكم - إحصائيات المركبات</h1><div class="grid grid-cols-2 gap-2 mb-4" id="stats"></div><div id="orders" class="space-y-2"></div>
-<script type="module">import {db} from './firebase.js';import {collection,onSnapshot,updateDoc,doc} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-onSnapshot(collection(db,"orders"),snap=>{let c={واو:0,تكسي:0,'3 طن':0,'10+':0};let html="";snap.forEach(d=>{const o=d.data();if(o.truckType.includes('واو'))c.واو++;else if(o.truckType.includes('تكسي'))c.تكسي++;else if(o.truckType.includes('3 طن'))c['3 طن']++;else c['10+']++; if(o.status!=='new')return; html+=`<div class="bg-white p-3 rounded-xl flex justify-between"><div><b>${o.truckType}</b><div class="text-xs">${o.from}→${o.to} | ${o.phone}</div></div><button onclick="acc('${d.id}')" class="bg-black text-white px-4 rounded-xl">قبول</button></div>`;});
-stats.innerHTML=`<div class="bg-cyan-300 p-3 rounded-xl"><b>واو ${c.واو}</b></div><div class="bg-blue-400 p-3 rounded-xl"><b>تكسي ${c.تكسي}</b></div><div class="bg-orange-300 p-3 rounded-xl"><b>3 طن ${c['3 طن']}</b></div><div class="bg-purple-400 p-3 rounded-xl"><b>10+ طن ${c['10+']}</b></div>`;orders.innerHTML=html;});
-window.acc=async(id)=>{await updateDoc(doc(db,"orders",id),{status:"accepted"});}
-</script></body></html>
+<script type="module">
+import { db } from './firebase.js';
+import { collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// السائقين
+onSnapshot(collection(db,"drivers"), snap=>{
+  drivers.innerHTML="";
+  snap.forEach(d=>{
+    const o=d.data(); if(o.status!="pending") return;
+    drivers.innerHTML+=`${o.dName} - ${o.dPhone} - ${o.dCarType} - ${o.dPlate} <button onclick="approve('${d.id}')">موافقة</button><button onclick="reject('${d.id}')">رفض</button><hr>`;
+  });
+});
+window.approve=(id)=>updateDoc(doc(db,"drivers",id),{status:"approved"});
+window.reject=(id)=>updateDoc(doc(db,"drivers",id),{status:"rejected"});
+
+// الطلبات
+onSnapshot(collection(db,"orders"), snap=>{
+  orders.innerHTML="<table><tr><th>الزبون</th><th>من</th><th>إلى</th><th>المبلغ</th><th>الحالة</th><th>السائق</th></tr>";
+  snap.forEach(d=>{
+    const o=d.data();
+    orders.innerHTML+=`<tr><td>${o.cName} ${o.cPhone}</td><td>${o.fromW} ${o.fromZone}</td><td>${o.toW} ${o.toZone}</td><td>${o.price}</td><td>${o.status}</td><td>${o.driverName||"لم يربط"} ${o.driverCar||""} ${o.driverPlate||""}</td></tr>`;
+  });
+  orders.innerHTML+="</table>";
+});
+</script>
+</body></html>
 
