@@ -1,61 +1,148 @@
+
 <!DOCTYPE html>
-<html dir="rtl" lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نقلي - طلب جديد</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نقلي - الزبون</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<style>body{font-family:sans-serif;padding:10px}input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #ccc}button{background:#16a34a;color:#fff;font-weight:bold}#map{height:250px;border-radius:10px}</style>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;font-family:Tajawal,Arial}
+body{background:#f5f7fa;margin:0;padding:12px}
+.card{background:#fff;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:10px;margin:7px 0;font-size:15px}
+input:focus,select:focus,textarea:focus{border-color:#27ae60;outline:none}
+#map{height:400px;border-radius:12px;border:2px solid #27ae60}
+.price{ background:#e8f5e9; border:1px dashed #27ae60; padding:12px; border-radius:10px; text-align:center; font-weight:bold; font-size:18px; margin-top:10px}
+.btn{width:100%;padding:14px;background:#27ae60;color:#fff;border:0;border-radius:12px;font-size:18px;font-weight:bold;cursor:pointer}
+.label{font-weight:bold;margin-top:8px;display:block;color:#333}
+</style>
 </head>
 <body>
-<h2>طلب نقل جديد</h2>
-<input id="cName" placeholder="الإسم">
-<input id="cPhone" placeholder="رقم الهاتف">
-<select id="carType"><option>تاكسي</option><option>واو</option><option>شاحنة 3 طن</option><option>شاحنة 10 طن فأكثر</option></select>
-<select id="goodsType"><option>أثاث منزلي</option><option>مواد بناء</option><option>بضائع تجارية</option><option>أجهزة كهربائية</option><option>مواد غذائية</option></select>
-<input id="goodsDesc" placeholder="وصف البضاعة">
-<select id="fromW">
-<option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>الميناء</option><option>الرياض</option><option>دار النعيم</option><option>السبخة</option>
+<h2 style="text-align:center;color:#27ae60">🚚 نقلي - طلب توصيل</h2>
+
+<div class="card">
+<label class="label">الاسم الكامل *</label>
+<input id="cName" placeholder="مثال: محمد أحمد">
+<label class="label">رقم الهاتف *</label>
+<input id="cPhone" placeholder="مثال: 22201234">
+
+<label class="label">نوع السيارة *</label>
+<select id="vType">
+<option value="تاكسي">🚕 تاكسي - صغير وسريع</option>
+<option value="واوا" selected>🛻 واوا بيك أب - متوسط 500كغ</option>
+<option value="شاحنة متوسطة 3 طن">🚚 شاحنة متوسطة 3 طن</option>
+<option value="شاحنة كبيرة 10 طن">🚛 شاحنة كبيرة 10 طن - 2000كغ</option>
 </select>
-<input id="fromZone" placeholder="المنطقة - الحي">
-<select id="toW">
-<option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>الميناء</option><option>الرياض</option><option>دار النعيم</option><option>السبخة</option>
+
+<label class="label">نوع البضاعة *</label>
+<select id="gType">
+<option value="">اختر...</option><option>أثاث منزلي</option><option>مواد غذائية</option><option>مستندات وأوراق</option><option>أجهزة كهربائية</option><option>مواد بناء</option><option>أخرى</option>
 </select>
-<input id="toZone" placeholder="المنطقة المتوجه إليها">
+
+<label class="label">وصف البضاعة *</label>
+<textarea id="gDesc" rows="2" placeholder="مثال: ثلاجة + طاولة..."></textarea>
+
+<label class="label">مكان الاستلام - مقاطعة نواكشوط *</label>
+<select id="pickM">
+<option value="">اختر المقاطعة...</option>
+<option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>دار النعيم</option><option>الرياض</option><option>الميناء</option><option>السبخة</option>
+</select>
+
+<label class="label">المنطقة / الحي</label>
+<input id="pickArea" placeholder="مثال: قرب مسجد...">
+
+<label class="label">المنطقة المتوجه إليها *</label>
+<input id="destArea" placeholder="مثال: نواذيبو - كيفة - روصو - تفرغ زينة...">
+
+<div class="price" id="priceBox">💰 مبلغ الرحلة: 4000 MRU</div>
+</div>
+
+<div class="card">
+<label class="label">📍 حدد موقعك على الخريطة - نواكشوط *</label>
 <div id="map"></div>
-<input id="price" type="number" placeholder="مبلغ الرحلة بالأوقية">
-<button id="sendBtn">إرسال الطلب</button>
+<p id="mapStatus" style="color:red;text-align:center;margin-top:8px">اضغط على الخريطة لتحديد موقعك الحالي</p>
+</div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<button class="btn" id="sendBtn">✅ إرسال الطلب الآن</button>
+<div id="msg"></div>
+
 <script type="module">
-import { db } from './firebase.js';
-import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { db } from "./firebase.js";
+import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-let lat=18.0735, lng=-15.9582;
-const map = L.map('map').setView([lat,lng], 12);
+const prices = {"تاكسي":1500,"واوا":4000,"شاحنة متوسطة 3 طن":6000,"شاحنة كبيرة 10 طن":10000};
+let userLatLng = null;
+let map, marker;
+
+function initMap(){
+map = L.map('map').setView([18.0735, -15.9582], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-let marker = L.marker([lat,lng], {draggable:true}).addTo(map);
-marker.on('dragend', e=>{ lat=e.target.getLatLng().lat; lng=e.target.getLatLng().lng; });
-
-// تحميل بيانات الزبون المحفوظة
-const saved = JSON.parse(localStorage.getItem("naqli_customer")||"{}");
-if(saved.name) document.getElementById("cName").value=saved.name;
-if(saved.phone) document.getElementById("cPhone").value=saved.phone;
-
-document.getElementById("sendBtn").onclick = async ()=>{
-  const data = {
-    cName: cName.value, cPhone: cPhone.value, carType: carType.value,
-    goodsType: goodsType.value, goodsDesc: goodsDesc.value,
-    fromW: fromW.value, fromZone: fromZone.value,
-    toW: toW.value, toZone: toZone.value,
-    price: price.value, lat, lng,
-    status: "pending", createdAt: serverTimestamp()
-  };
-  if(!data.cName || !data.cPhone || !data.fromZone){ alert("أكمل البيانات"); return; }
-  
-  localStorage.setItem("naqli_customer", JSON.stringify({name:data.cName, phone:data.cPhone}));
-  await addDoc(collection(db,"orders"), data);
-  alert("تم إرسال طلبك، سيتصل بك السائق بعد موافقة المسؤول");
+map.on('click', e=>{
+userLatLng=e.latlng;
+if(marker) map.removeLayer(marker);
+marker=L.marker(e.latlng).addTo(map).bindPopup("موقع الاستلام").openPopup();
+mapStatus.textContent="✅ تم تحديد الموقع: " + e.latlng.lat.toFixed(5);
+mapStatus.style.color="green";
+});
+setTimeout(()=>map.invalidateSize(),600);
 }
+
+function updatePrice(){
+let v=vType.value;
+priceBox.textContent=`💰 مبلغ الرحلة: ${prices[v]} MRU - ${v}`;
+}
+
+// تحميل محفوظ تلقائيا
+cName.value=localStorage.getItem('naqli_name')||"";
+cPhone.value=localStorage.getItem('naqli_phone')||"";
+pickM.value=localStorage.getItem('naqli_mouqataa')||"";
+pickArea.value=localStorage.getItem('naqli_area')||"";
+gType.value=localStorage.getItem('naqli_gType')||"";
+
+vType.addEventListener('change', updatePrice);
+updatePrice();
+initMap();
+
+sendBtn.onclick=async()=>{
+let data={
+name:cName.value.trim(),
+phone:cPhone.value.trim(),
+vehicle:vType.value,
+goodsType:gType.value,
+goodsDesc:gDesc.value.trim(),
+mouqataa:pickM.value,
+pickArea:pickArea.value.trim(),
+destArea:destArea.value.trim(),
+price:prices[vType.value],
+lat:userLatLng?.lat,
+lng:userLatLng?.lng,
+status:"new",
+progress:10,
+createdAt:new Date()
+};
+
+if(!data.name||!data.phone||!data.goodsType||!data.goodsDesc||!data.mouqataa||!data.destArea||!userLatLng){
+return alert("⚠️ أكمل جميع الحقول وحدد موقعك على الخريطة");
+}
+
+// حفظ تلقائي للمرة القادمة
+localStorage.setItem('naqli_name',data.name);
+localStorage.setItem('naqli_phone',data.phone);
+localStorage.setItem('naqli_mouqataa',data.mouqataa);
+localStorage.setItem('naqli_area',data.pickArea);
+localStorage.setItem('naqli_gType',data.goodsType);
+
+msg.innerHTML="⏳ جاري الإرسال...";
+try{
+await addDoc(collection(db,"requests"),data);
+msg.innerHTML=`<div style="background:#e8f5e9;padding:14px;border-radius:12px;margin-top:12px;border:1px solid #27ae60"><b>✅ تم إرسال طلبك بنجاح يا ${data.name}!</b><br>📍 من: ${data.mouqataa} - ${data.pickArea}<br>🎯 إلى: ${data.destArea}<br>🚛 السيارة: ${data.vehicle}<br>💰 المبلغ: ${data.price} MRU<br><br>سيتصل بك السائق قريباً</div>`;
+}catch(e){
+msg.innerHTML=`<div style="background:#ffebee;padding:10px;border-radius:10px;color:#c62828">خطأ: ${e.message}<br>تأكد أن Firestore Rules = allow read, write: if true;</div>`;
+}
+};
 </script>
 </body>
 </html>
+
