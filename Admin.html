@@ -1,34 +1,92 @@
+
 <!DOCTYPE html>
-<html dir="rtl"><head><meta charset="UTF-8"><title>لوحة التحكم</title>
-<style>table{width:100%;border-collapse:collapse}td,th{border:1px solid #ccc;padding:8px}button{padding:5px 10px}</style>
-</head><body>
-<h2>طلبات السائقين المعلقة</h2><div id="drivers"></div>
-<h2>طلبات الزبائن الحية - ربط بالسائق المعتمد</h2><div id="orders"></div>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نقلي - لوحة المسؤول</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;font-family:Tajawal,Arial}
+body{margin:0;padding:12px;background:#eef2f7}
+.card{background:#fff;border-radius:12px;padding:14px;margin:10px 0;box-shadow:0 2px 6px rgba(0,0,0,.07)}
+#map{height:450px;border-radius:12px;border:2px solid #0a3d62}
+.bar{height:14px;background:#eee;border-radius:20px;overflow:hidden}
+.bar div{height:100%;background:linear-gradient(90deg,#27ae60,#2ecc71);transition:0.5s}
+.btn{padding:8px 12px;border:0;border-radius:8px;cursor:pointer;margin:3px}
+.approve{background:#27ae60;color:#fff}
+.reject{background:#e74c3c;color:#fff}
+</style>
+</head>
+<body>
+<h2 style="color:#0a3d62">👑 نقلي - لوحة المشرف</h2>
+<div class="card">
+<input type="password" id="pass" placeholder="كلمة السر">
+<button class="btn approve" onclick="login()">دخول</button>
+<p style="font-size:12px">السر الافتراضي: naqli2026</p>
+</div>
+
+<div id="panel" style="display:none">
+<div class="card"><h3>⏳ سائقون معلقون للموافقة</h3><div id="pending"></div></div>
+<div class="card"><h3>📦 طلبات الزبائن الحية</h3><div id="reqs"></div></div>
+<div class="card"><h3>🗺️ تتبع سير الرحلة على الخريطة بالنسب المئوية</h3><div id="map"></div></div>
+</div>
 
 <script type="module">
-import { db } from './firebase.js';
-import { collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { db } from "./firebase.js";
+import { collection, getDocs, query, where, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// السائقين
-onSnapshot(collection(db,"drivers"), snap=>{
-  drivers.innerHTML="";
-  snap.forEach(d=>{
-    const o=d.data(); if(o.status!="pending") return;
-    drivers.innerHTML+=`${o.dName} - ${o.dPhone} - ${o.dCarType} - ${o.dPlate} <button onclick="approve('${d.id}')">موافقة</button><button onclick="reject('${d.id}')">رفض</button><hr>`;
-  });
-});
-window.approve=(id)=>updateDoc(doc(db,"drivers",id),{status:"approved"});
-window.reject=(id)=>updateDoc(doc(db,"drivers",id),{status:"rejected"});
+let map;
+window.login=function(){
+if(pass.value!=="naqli2026") return alert("كلمة السر خطأ");
+panel.style.display="block";
+initMap();
+loadAll();
+};
 
-// الطلبات
-onSnapshot(collection(db,"orders"), snap=>{
-  orders.innerHTML="<table><tr><th>الزبون</th><th>من</th><th>إلى</th><th>المبلغ</th><th>الحالة</th><th>السائق</th></tr>";
-  snap.forEach(d=>{
-    const o=d.data();
-    orders.innerHTML+=`<tr><td>${o.cName} ${o.cPhone}</td><td>${o.fromW} ${o.fromZone}</td><td>${o.toW} ${o.toZone}</td><td>${o.price}</td><td>${o.status}</td><td>${o.driverName||"لم يربط"} ${o.driverCar||""} ${o.driverPlate||""}</td></tr>`;
-  });
-  orders.innerHTML+="</table>";
+function initMap(){
+map=L.map('map').setView([18.0735,-15.9582],11);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+}
+
+async function loadAll(){
+let pSnap=await getDocs(query(collection(db,"drivers"),where("status","==","pending")));
+let h1="";
+pSnap.forEach(d=>{
+let o=d.data();
+h1+=`<div class="card" style="border:1px dashed #f39c12">
+<b>${o.name}</b> - ${o.phone} - ${o.vehicle} - لوحة ${o.plate}<br>
+<button class="btn approve" onclick="approveDriver('${d.id}')">✅ موافقة</button>
+<button class="btn reject" onclick="rejectDriver('${d.id}')">❌ رفض</button>
+</div>`;
 });
+pending.innerHTML=h1||"لا يوجد سائقون معلقون";
+
+let rSnap=await getDocs(collection(db,"requests"));
+let h2="";
+rSnap.forEach(d=>{
+let o=d.data();
+h2+=`<div class="card">
+<b>${o.name} - ${o.phone}</b> | ${o.mouqataa} → ${o.destArea} | ${o.vehicle} | ${o.status}<br>
+💰 ${o.price} MRU | السائق: ${o.driverName||"لم يسند بعد"}<br>
+<div class="bar" style="margin:8px 0"><div style="width:${o.progress||10}%"></div></div>
+<div style="display:flex;justify-content:space-between;font-size:12px"><span>10%</span><span><b>${o.progress||10}%</b></span><span>100%</span></div>
+<div style="margin-top:8px">
+${o.lat?`<button class="btn" style="background:#0a3d62;color:#fff" onclick="showOnMap(${o.lat},${o.lng},'${o.name}')">📍 عرض على الخريطة</button>`:''}
+<select onchange="setProgress('${d.id}',this.value)" style="width:auto"><option>${o.progress||10}</option><option>10</option><option>30</option><option>50</option><option>80</option><option>100</option></select>
+% تقدم
+</div>
+</div>`;
+});
+reqs.innerHTML=h2;
+}
+
+window.approveDriver=async(id)=>{await updateDoc(doc(db,"drivers",id),{status:"approved"}); loadAll();};
+window.rejectDriver=async(id)=>{await deleteDoc(doc(db,"drivers",id)); loadAll();};
+window.setProgress=async(id,val)=>{await updateDoc(doc(db,"requests",id),{progress:parseInt(val)}); loadAll();};
+window.showOnMap=function(lat,lng,name){
+map.setView([lat,lng],14);
+L.marker([lat,lng]).addTo(map).bindPopup(name).openPopup();
+};
 </script>
-</body></html>
-
+</body>
+</html>
