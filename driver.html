@@ -1,19 +1,14 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نقلي - السائق</title>
 <style>
-*{box-sizing:border-box;font-family:Tajawal,Arial}
-body{background:#f5f7fa;margin:0;padding:12px}
+*{box-sizing:border-box;font-family:Tajawal,Arial} body{background:#f5f7fa;margin:0;padding:12px}
 .card{background:#fff;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.07)}
 input,select{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:10px;margin:6px 0}
 .btn{width:100%;padding:14px;background:#0a3d62;color:#fff;border:0;border-radius:12px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:8px}
-.btn-green{background:#27ae60}
-.badge{padding:4px 10px;border-radius:20px;font-size:12px}
-.pending{background:#fff3e0;color:#e65100}
-.approved{background:#e8f5e9;color:#2e7d32}
+.btn-green{background:#27ae60}.preview{width:80px;height:80px;border-radius:10px;object-fit:cover;border:2px solid #27ae60;display:none}
 </style>
 </head>
 <body>
@@ -23,45 +18,43 @@ input,select{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:10
 <h3>📝 تسجيل سائق جديد</h3>
 <input id="dName" placeholder="الاسم الكامل *">
 <input id="dPhone" placeholder="رقم الهاتف *">
-<select id="dVehicle">
-<option>تاكسي</option><option>واوا</option><option>شاحنة متوسطة 3 طن</option><option>شاحنة كبيرة 10 طن</option>
-</select>
-<input id="dPlate" placeholder="لوحة السيارة * مثال: 1234 AB">
-<label>📸 صورة شخصية *</label><input type="file" id="dPhoto" accept="image/*">
-<label>🪪 صورة بطاقة التعريف *</label><input type="file" id="dIdPhoto" accept="image/*">
-<button class="btn" id="regBtn">إرسال للموافقة</button>
+<select id="dVehicle"><option>تاكسي</option><option>واوا</option><option>شاحنة متوسطة 3 طن</option><option>شاحنة كبيرة 10 طن</option></select>
+<input id="dPlate" placeholder="لوحة السيارة *">
+<label>📸 صورة شخصية *</label><input type="file" id="dPhoto" accept="image/*"><img id="p1" class="preview">
+<label>🪪 صورة بطاقة التعريف *</label><input type="file" id="dIdPhoto" accept="image/*"><img id="p2" class="preview">
+<button class="btn" id="regBtn">إرسال للموافقة - سيتم حفظ معلوماتك بأمان</button>
 <div id="regMsg"></div>
-<p style="font-size:12px;color:#666;text-align:center;margin-top:10px">⚠️ لا يمكن اعتماده إلا بموافقة المسؤول</p>
 </div>
 
 <div class="card" id="loginCard">
 <h3>🔑 دخول السائق المعتمد</h3>
-<input id="loginPhone" placeholder="أدخل رقم هاتفك المعتمد">
+<input id="loginPhone" placeholder="رقم هاتفك">
 <button class="btn btn-green" id="loginBtn">دخول</button>
 </div>
-
-<div id="driverInfo"></div>
-<div id="orders"></div>
+<div id="driverInfo"></div><div id="orders"></div>
 
 <script type="module">
 import { db } from "./firebase.js";
 import { collection, addDoc, getDocs, query, where, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-let curDriver=null;
+// معاينة الصور
+dPhoto.onchange=e=>{ let f=e.target.files[0]; if(f){ p1.src=URL.createObjectURL(f); p1.style.display="block"; } };
+dIdPhoto.onchange=e=>{ let f=e.target.files[0]; if(f){ p2.src=URL.createObjectURL(f); p2.style.display="block"; } };
 
+function toBase64(file){ return new Promise((res,rej)=>{ let r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
+
+let curDriver=null;
 regBtn.onclick=async()=>{
-let data={
-name:dName.value.trim(),
-phone:dPhone.value.trim(),
-vehicle:dVehicle.value,
-plate:dPlate.value.trim(),
-status:"pending",
-createdAt:new Date()
-};
-if(!data.name||!data.phone||!data.plate) return alert("أكمل البيانات");
-regMsg.textContent="⏳ جاري الإرسال...";
+let name=dName.value.trim(), phone=dPhone.value.trim(), vehicle=dVehicle.value, plate=dPlate.value.trim();
+if(!name||!phone||!plate||!dPhoto.files[0]||!dIdPhoto.files[0]) return alert("⚠️ أكمل جميع البيانات والصور");
+regMsg.textContent="⏳ جاري ضغط وحفظ الصور بأمان...";
+try{
+let photoBase64=await toBase64(dPhoto.files[0]);
+let idPhotoBase64=await toBase64(dIdPhoto.files[0]);
+let data={name,phone,vehicle,plate,photoBase64,idPhotoBase64,status:"pending",createdAt:new Date(), secure:true};
 await addDoc(collection(db,"drivers"),data);
-regMsg.innerHTML="<div style='background:#e8f5e9;padding:10px;border-radius:10px;color:green'>✅ تم الإرسال، انتظر موافقة المسؤول</div>";
+regMsg.innerHTML="<div style='background:#e8f5e9;padding:10px;border-radius:10px;color:green'>✅ تم حفظ معلوماتك بأمان، انتظر موافقة المسؤول في admin.html</div>";
+}catch(e){ regMsg.textContent="خطأ: "+e.message; }
 };
 
 loginBtn.onclick=async()=>{
@@ -69,47 +62,25 @@ let q=query(collection(db,"drivers"),where("phone","==",loginPhone.value.trim())
 let snap=await getDocs(q);
 if(snap.empty) return alert("رقم غير موجود");
 let d=snap.docs[0]; let o=d.data();
-if(o.status!="approved") return alert("⏳ حسابك لا يزال قيد المراجعة، لم تتم الموافقة بعد");
+if(o.status!="approved") return alert("⏳ لم تتم الموافقة بعد");
 curDriver={id:d.id,...o};
-driverInfo.innerHTML=`<div class="card" style="border:2px solid #27ae60"><b>مرحبا ${o.name}</b> - ${o.vehicle} - ${o.plate} <span class="badge approved">معتمد ✅</span></div>`;
-regCard.style.display="none";
-loginCard.style.display="none";
+driverInfo.innerHTML=`<div class="card" style="border:2px solid #27ae60"><b>مرحبا ${o.name}</b> - ${o.vehicle}<br>معتمد ✅</div>`;
 loadOrders();
 };
 
 async function loadOrders(){
-if(!curDriver) return;
 let q=query(collection(db,"requests"),where("vehicle","==",curDriver.vehicle),where("status","==","new"));
 let snap=await getDocs(q);
 let h="";
-snap.forEach(docSnap=>{
-let o=docSnap.data();
-h+=`<div class="card">
-<b>📍 ${o.mouqataa} (${o.pickArea}) → ${o.destArea}</b><br>
-📦 ${o.goodsType} - ${o.goodsDesc}<br>
-👤 الزبون: ${o.name}<br>
-💰 المبلغ: <b>${o.price} MRU</b><br>
-<div style="margin-top:8px"><button class="btn btn-green" onclick="acceptOrder('${docSnap.id}')">✅ قبول الطلب</button></div>
-</div>`;
+snap.forEach(s=>{
+let o=s.data();
+h+=`<div class="card"><b>${o.mouqataa} → ${o.destArea}</b><br>${o.goodsDesc}<br>💰 ${o.price} MRU<br><button class="btn btn-green" onclick="acceptOrder('${s.id}')">قبول</button></div>`;
 });
-orders.innerHTML=h||"<div class='card'>لا يوجد طلبات جديدة لنوع سيارتك حاليا</div>";
+orders.innerHTML=h||"لا يوجد طلبات";
 }
-
 window.acceptOrder=async(id)=>{
-await updateDoc(doc(db,"requests",id),{
-status:"accepted",
-acceptedBy:curDriver.id,
-driverName:curDriver.name,
-driverPhone:curDriver.phone,
-driverPlate:curDriver.plate,
-progress:50
-});
-// جلب رقم الزبون بعد القبول
-let q=query(collection(db,"requests"),where("__name__","==",id));
-let snap=await getDocs(collection(db,"requests"));
-let target=snap.docs.find(d=>d.id==id);
-let o=target.data();
-alert(`✅ تم قبول الطلب!\n\nاتصل بالزبون الآن:\n👤 ${o.name}\n📞 ${o.phone}\n📍 ${o.mouqataa} - ${o.pickArea}\n\nرقم الزبون ظهر لك فقط لأنك قبلت الطلب`);
+await updateDoc(doc(db,"requests",id),{status:"accepted", driverName:curDriver.name, driverPhone:curDriver.phone, progress:50});
+alert("تم قبول الطلب - اتصل بالزبون");
 loadOrders();
 };
 </script>
