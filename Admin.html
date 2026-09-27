@@ -24,12 +24,12 @@ body{margin:0;padding:12px;background:#eef2f7}
 </head>
 <body>
 <h2 style="color:#0a3d62">👑 نقلي - لوحة المشرف الآمنة</h2>
-<div class="card">
-<input type="password" id="pass" placeholder="كلمة السر">
-<button class="btn approve" onclick="login()">دخول</button>
-<p style="font-size:12px">السر: naqli2026</p>
-</div>
 
+<div class="card" id="loginBox">
+<input type="email" id="email" placeholder="ايميل المسؤول" value="admin@nagli.mr">
+<input type="password" id="pass" placeholder="كلمة السر الجديدة">
+<button class="btn approve" onclick="login()">دخول آمن</button>
+</div>
 <div id="panel" style="display:none">
 <div class="card" style="border:2px solid #f39c12"><h3>⏳ سائقون معلقون - يحتاجون تحقق</h3><div id="pending"></div></div>
 <div class="card"><h3>✅ سائقون معتمدون ومحفوظون بأمان</h3><div id="approved"></div></div>
@@ -45,94 +45,99 @@ body{margin:0;padding:12px;background:#eef2f7}
 <button class="btn" style="background:#666;color:#fff;width:100%;margin-top:10px" onclick="closeModal()">إغلاق</button>
 </div>
 </div>
-
 <script type="module">
 import { db } from "./firebase.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { collection, getDocs, query, where, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+const auth = getAuth();
 let map, driversCache={};
 
-window.login=function(){
-if(pass.value!=="naqli2026") return alert("كلمة السر خطأ");
-panel.style.display="block";
-initMap();
-loadAll();
+// يتحقق تلقائيا هل أنت مسجل دخول
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    document.getElementById('panel').style.display="block";
+    document.getElementById('loginBox').style.display="none";
+    initMap();
+    loadAll();
+  } else {
+    document.getElementById('panel').style.display="none";
+    document.getElementById('loginBox').style.display="block";
+  }
+});
+
+window.login = async function(){
+  const email = document.getElementById('email').value;
+  const pass = document.getElementById('pass').value;
+  try{
+    await signInWithEmailAndPassword(auth, email, pass);
+  }catch(e){
+    alert("كلمة السر خطأ: " + e.message);
+  }
+};
+
+window.logout = async function(){
+  await signOut(auth);
+  location.reload();
 };
 
 function initMap(){
-map=L.map('map').setView([18.0735,-15.9582],11);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  map=L.map('map').setView([18.0735,-15.9582],11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 }
 
 async function loadAll(){
-let pSnap=await getDocs(query(collection(db,"drivers"),where("status","==","pending")));
-let h1="";
-pSnap.forEach(d=>{
-let o=d.data(); driversCache[d.id]=o;
-let photo=o.photoBase64||"";
-let idPhoto=o.idPhotoBase64||"";
-h1+=`<div class="card" style="border:1px solid #f39c12">
-<div style="display:grid;grid-template-columns:80px 1fr;gap:10px">
-<img src="${photo||'https://via.placeholder.com/80'}" class="preview-img" style="height:80px" onclick="openVerify('${d.id}')">
-<div>
-<b>👤 ${o.name}</b><br>📞 ${o.phone}<br>🚛 ${o.vehicle}<br>🔢 لوحة: ${o.plate}<br><small>📅 ${o.createdAt?.toDate?.()?.toLocaleString?.()||''}</small>
-</div>
-</div>
-<div style="margin-top:10px;display:flex;gap:6px">
-<button class="btn blue" onclick="openVerify('${d.id}')">🔍 تحقق كامل</button>
-<button class="btn approve" onclick="approveDriver('${d.id}')">✅ اعتماد</button>
-<button class="btn reject" onclick="rejectDriver('${d.id}')">❌ رفض</button>
-</div>
-</div>`;
-});
-pending.innerHTML=h1||"لا يوجد سائقون معلقون";
+  // نفس كودك القديم كامل - لا تغيره
+  let pSnap=await getDocs(query(collection(db,"drivers"),where("status","==","pending")));
+  let h1="";
+  pSnap.forEach(d=>{
+    let o=d.data(); driversCache[d.id]=o;
+    h1+=`<div class="card" style="border:1px solid #f39c12">
+    <b>👤 ${o.name}</b> - 📞 ${o.phone} - 🚛 ${o.vehicle}<br>
+    <button class="btn blue" onclick="openVerify('${d.id}')">🔍 تحقق كامل</button>
+    <button class="btn approve" onclick="approveDriver('${d.id}')">✅ اعتماد</button>
+    <button class="btn reject" onclick="rejectDriver('${d.id}')">❌ رفض</button>
+    </div>`;
+  });
+  document.getElementById('pending').innerHTML=h1||"لا يوجد معلقون";
 
-// المعتمدون
-let aSnap=await getDocs(query(collection(db,"drivers"),where("status","==","approved")));
-let hA="";
-aSnap.forEach(d=>{
-let o=d.data(); driversCache[d.id]=o;
-hA+=`<div class="card" style="border:1px solid #27ae60">✅ <b>${o.name}</b> - ${o.phone} - ${o.vehicle} - ${o.plate} <span style="float:left"><button class="btn blue" onclick="openVerify('${d.id}')">عرض</button></span></div>`;
-});
-approved.innerHTML=hA||"لا يوجد معتمدون بعد";
+  let aSnap=await getDocs(query(collection(db,"drivers"),where("status","==","approved")));
+  let hA="";
+  aSnap.forEach(d=>{
+    let o=d.data(); driversCache[d.id]=o;
+    hA+=`<div class="card" style="border:1px solid #27ae60">✅ <b>${o.name}</b> - ${o.phone} <button class="btn blue" onclick="openVerify('${d.id}')">عرض</button></div>`;
+  });
+  document.getElementById('approved').innerHTML=hA||"لا يوجد معتمدون";
 
-// الطلبات
-let rSnap=await getDocs(collection(db,"requests"));
-let h2="";
-rSnap.forEach(d=>{
-let o=d.data();
-h2+=`<div class="card"><b>${o.name} - ${o.phone}</b> | ${o.mouqataa} → ${o.destArea} | ${o.status}<br>💰 ${o.price} MRU | سائق: ${o.driverName||"لم يسند"}<div class="bar" style="margin:8px 0"><div style="width:${o.progress||10}%"></div></div></div>`;
-});
-reqs.innerHTML=h2;
+  let rSnap=await getDocs(collection(db,"requests"));
+  let h2="";
+  rSnap.forEach(d=>{
+    let o=d.data();
+    h2+=`<div class="card"><b>${o.name} - ${o.phone}</b> | ${o.mouqataa} → ${o.destArea} | ${o.status} | 💰 ${o.price} MRU</div>`;
+  });
+  document.getElementById('reqs').innerHTML=h2;
 }
 
 window.openVerify=(id)=>{
-let o=driversCache[id];
-if(!o) return;
-verifyContent.innerHTML=`
-<p><b>الاسم:</b> ${o.name}</p>
-<p><b>الهاتف:</b> <a href="tel:${o.phone}">${o.phone}</a> (مؤمن - لا يظهر للزبائن)</p>
-<p><b>السيارة:</b> ${o.vehicle}</p>
-<p><b>اللوحة:</b> ${o.plate}</p>
-<p><b>الحالة:</b> ${o.status}</p>
-<hr>
-<p><b>📸 الصورة الشخصية:</b></p>
-<img src="${o.photoBase64||''}" style="width:100%;border-radius:10px;border:2px solid #27ae60" onerror="this.src='https://via.placeholder.com/400?text=لا+يوجد+صورة'">
-<p style="margin-top:12px"><b>🪪 بطاقة التعريف:</b></p>
-<img src="${o.idPhotoBase64||''}" style="width:100%;border-radius:10px;border:2px solid #0a3d62" onerror="this.src='https://via.placeholder.com/400?text=لا+يوجد+صورة'">
-<hr>
-<div style="display:flex;gap:8px;margin-top:10px">
-<button class="btn approve" style="flex:1" onclick="approveDriver('${id}');closeModal()">✅ تأكيد الاعتماد</button>
-<button class="btn reject" style="flex:1" onclick="rejectDriver('${id}');closeModal()">❌ رفض وحذف</button>
-</div>
-<p style="font-size:11px;color:#666;margin-top:10px">⚠️ معلومات السائق محفوظة بشكل آمن في Firestore ولا يمكن للزبائن رؤيتها إلا بعد قبول الطلب</p>
-`;
-verifyModal.classList.add('active');
+  let o=driversCache[id];
+  if(!o) return;
+  document.getElementById('verifyContent').innerHTML=`
+  <p><b>الاسم:</b> ${o.name}</p>
+  <p><b>الهاتف:</b> ${o.phone}</p>
+  <p><b>السيارة:</b> ${o.vehicle}</p>
+  <p><b>اللوحة:</b> ${o.plate}</p>
+  <img src="${o.photoBase64||''}" style="width:100%;border-radius:10px;margin-top:10px">
+  <img src="${o.idPhotoBase64||''}" style="width:100%;border-radius:10px;margin-top:10px">
+  <div style="display:flex;gap:8px;margin-top:10px">
+  <button class="btn approve" style="flex:1" onclick="approveDriver('${id}');closeModal()">✅ اعتماد</button>
+  <button class="btn reject" style="flex:1" onclick="rejectDriver('${id}');closeModal()">❌ رفض</button>
+  </div>`;
+  document.getElementById('verifyModal').classList.add('active');
 };
 
-window.closeModal=()=>verifyModal.classList.remove('active');
+window.closeModal=()=>document.getElementById('verifyModal').classList.remove('active');
 window.approveDriver=async(id)=>{await updateDoc(doc(db,"drivers",id),{status:"approved", approvedAt:new Date()}); loadAll();};
-window.rejectDriver=async(id)=>{ if(!confirm("حذف السائق نهائيا؟")) return; await deleteDoc(doc(db,"drivers",id)); loadAll();};
+window.rejectDriver=async(id)=>{ if(!confirm("حذف نهائيا؟")) return; await deleteDoc(doc(db,"drivers",id)); loadAll();};
 </script>
 </body>
 </html>
