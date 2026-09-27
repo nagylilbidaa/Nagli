@@ -1,143 +1,115 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نقلي - لوحة المسؤول الآمنة</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نقلي - لوحة تحكم احترافية</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-*{box-sizing:border-box;font-family:Tajawal,Arial}
-body{margin:0;padding:12px;background:#eef2f7}
-.card{background:#fff;border-radius:12px;padding:14px;margin:10px 0;box-shadow:0 2px 6px rgba(0,0,0,.07)}
-#map{height:450px;border-radius:12px;border:2px solid #0a3d62}
-.bar{height:14px;background:#eee;border-radius:20px;overflow:hidden}
-.bar div{height:100%;background:linear-gradient(90deg,#27ae60,#2ecc71);transition:0.5s}
-.btn{padding:10px 14px;border:0;border-radius:8px;cursor:pointer;margin:3px;font-weight:bold}
-.approve{background:#27ae60;color:#fff}
-.reject{background:#e74c3c;color:#fff}
-.blue{background:#0a3d62;color:#fff}
-.preview-img{width:100%;height:160px;object-fit:cover;border-radius:10px;border:2px solid #ddd;cursor:pointer}
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;padding:20px}
-.modal.active{display:flex}
-.modal-box{background:#fff;border-radius:16px;padding:20px;max-width:500px;width:100%;max-height:90vh;overflow:auto}
+:root{--main:#0a3d62;--green:#27ae60;--red:#e74c3c;--bg:#f0f4f8}
+*{box-sizing:border-box;font-family:Tajawal,system-ui}body{margin:0;background:var(--bg)}
+.header{background:var(--main);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;padding:12px}
+.stat{background:#fff;border-radius:12px;padding:14px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.card{background:#fff;border-radius:12px;padding:14px;margin:12px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.btn{padding:8px 14px;border:0;border-radius:8px;cursor:pointer;font-weight:bold}
+.approve{background:var(--green);color:#fff}.reject{background:var(--red);color:#fff}.blue{background:var(--main);color:#fff}
+input{width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;margin:6px 0}
+#map{height:500px;border-radius:12px}
+.badge{padding:4px 8px;border-radius:20px;font-size:12px;color:#fff}
 </style>
 </head>
 <body>
-<h2 style="color:#0a3d62">👑 نقلي - لوحة المشرف الآمنة</h2>
-
-<div class="card" id="loginBox">
-<input type="email" id="email" placeholder="ايميل المسؤول" value="admin@nagli.mr">
-<input type="password" id="pass" placeholder="كلمة السر الجديدة">
-<button class="btn approve" onclick="login()">دخول آمن</button>
+<div id="loginBox" class="card" style="max-width:380px;margin:90px auto;text-align:center">
+<h2>👑 دخول الإدارة</h2>
+<input id="email" type="email" placeholder="naqlylilbidaa@gmail.com" value="naqlylilbidaa@gmail.com">
+<input id="pass" type="password" placeholder="كلمة السر">
+<button class="btn approve" style="width:100%" onclick="login()">دخول آمن</button>
+<p id="err" style="color:red"></p>
 </div>
+
 <div id="panel" style="display:none">
-<div class="card" style="border:2px solid #f39c12"><h3>⏳ سائقون معلقون - يحتاجون تحقق</h3><div id="pending"></div></div>
-<div class="card"><h3>✅ سائقون معتمدون ومحفوظون بأمان</h3><div id="approved"></div></div>
-<div class="card"><h3>📦 طلبات الزبائن الحية</h3><div id="reqs"></div></div>
-<div class="card"><h3>🗺️ تتبع الرحلات</h3><div id="map"></div></div>
+<div class="header"><b>🚚 نقلي - لوحة التحكم</b><div><span id="adminEmail"></span> <button class="btn" style="background:#fff;color:var(--main)" onclick="logout()">خروج</button></div></div>
+
+<div class="stats">
+<div class="stat"><h2 id="sPending">0</h2><small>معلقون</small></div>
+<div class="stat"><h2 id="sApproved">0</h2><small>معتمدون</small></div>
+<div class="stat"><h2 id="sReq">0</h2><small>طلبات</small></div>
 </div>
 
-<!-- نافذة التحقق -->
-<div class="modal" id="verifyModal">
-<div class="modal-box">
-<h3 style="color:#0a3d62">🔍 تحقق من بيانات السائق</h3>
-<div id="verifyContent"></div>
-<button class="btn" style="background:#666;color:#fff;width:100%;margin-top:10px" onclick="closeModal()">إغلاق</button>
+<div class="card"><input id="search" placeholder="🔍 ابحث بالاسم أو الهاتف..." oninput="filter()"></div>
+<div class="card" style="border-right:5px solid orange"><h3>⏳ معلقون</h3><div id="pending"></div></div>
+<div class="card" style="border-right:5px solid var(--green)"><h3>✅ معتمدون</h3><div id="approved"></div></div>
+<div class="card"><h3>📦 الطلبات</h3><div id="reqs"></div></div>
+<div class="card"><h3>🗺️ الخريطة الحية</h3><div id="map"></div></div>
 </div>
-</div>
+
 <script type="module">
 import { db } from "./firebase.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { collection, getDocs, query, where, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, getDocs, query, where, updateDoc, doc, deleteDoc, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+const ALLOWED_ADMINS = ["naqlylilbidaa@gmail.com"]; // غيره لإيميلك الحقيقي
 const auth = getAuth();
-let map, driversCache={};
+let map;
 
-// يتحقق تلقائيا هل أنت مسجل دخول
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    document.getElementById('panel').style.display="block";
-    document.getElementById('loginBox').style.display="none";
-    initMap();
-    loadAll();
-  } else {
-    document.getElementById('panel').style.display="none";
-    document.getElementById('loginBox').style.display="block";
-  }
+onAuthStateChanged(auth, user=>{
+ if(user && ALLOWED_ADMINS.includes(user.email)){
+   document.getElementById('panel').style.display='block';
+   document.getElementById('loginBox').style.display='none';
+   document.getElementById('adminEmail').innerText=user.email;
+   init(); resetTimer();
+ } else if(user){
+   alert("هذا الحساب ليس مسؤولا"); signOut(auth);
+ } else {
+   document.getElementById('panel').style.display='none';
+   document.getElementById('loginBox').style.display='block';
+ }
 });
 
-window.login = async function(){
-  const email = document.getElementById('email').value;
-  const pass = document.getElementById('pass').value;
-  try{
-    await signInWithEmailAndPassword(auth, email, pass);
-  }catch(e){
-    alert("كلمة السر خطأ: " + e.message);
-  }
+window.login = async()=>{
+ try{ await signInWithEmailAndPassword(auth, email.value.trim(), pass.value); }
+ catch(e){ err.innerText="خطأ: "+e.code; }
 };
+window.logout = ()=> signOut(auth).then(()=>location.reload());
 
-window.logout = async function(){
-  await signOut(auth);
-  location.reload();
-};
-
-function initMap(){
-  map=L.map('map').setView([18.0735,-15.9582],11);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+function init(){
+ map=L.map('map').setView([18.0735,-15.9582],11);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+ // تحديث فوري
+ onSnapshot(collection(db,"drivers"), ()=>loadAll());
+ onSnapshot(collection(db,"requests"), ()=>loadAll());
+ loadAll();
 }
 
 async function loadAll(){
-  // نفس كودك القديم كامل - لا تغيره
-  let pSnap=await getDocs(query(collection(db,"drivers"),where("status","==","pending")));
-  let h1="";
-  pSnap.forEach(d=>{
-    let o=d.data(); driversCache[d.id]=o;
-    h1+=`<div class="card" style="border:1px solid #f39c12">
-    <b>👤 ${o.name}</b> - 📞 ${o.phone} - 🚛 ${o.vehicle}<br>
-    <button class="btn blue" onclick="openVerify('${d.id}')">🔍 تحقق كامل</button>
-    <button class="btn approve" onclick="approveDriver('${d.id}')">✅ اعتماد</button>
-    <button class="btn reject" onclick="rejectDriver('${d.id}')">❌ رفض</button>
-    </div>`;
-  });
-  document.getElementById('pending').innerHTML=h1||"لا يوجد معلقون";
-
-  let aSnap=await getDocs(query(collection(db,"drivers"),where("status","==","approved")));
-  let hA="";
-  aSnap.forEach(d=>{
-    let o=d.data(); driversCache[d.id]=o;
-    hA+=`<div class="card" style="border:1px solid #27ae60">✅ <b>${o.name}</b> - ${o.phone} <button class="btn blue" onclick="openVerify('${d.id}')">عرض</button></div>`;
-  });
-  document.getElementById('approved').innerHTML=hA||"لا يوجد معتمدون";
-
-  let rSnap=await getDocs(collection(db,"requests"));
-  let h2="";
-  rSnap.forEach(d=>{
-    let o=d.data();
-    h2+=`<div class="card"><b>${o.name} - ${o.phone}</b> | ${o.mouqataa} → ${o.destArea} | ${o.status} | 💰 ${o.price} MRU</div>`;
-  });
-  document.getElementById('reqs').innerHTML=h2;
+ let pSnap=await getDocs(query(collection(db,"drivers"),where("status","==","pending")));
+ let aSnap=await getDocs(query(collection(db,"drivers"),where("status","==","approved")));
+ let rSnap=await getDocs(collection(db,"requests"));
+ sPending.innerText=pSnap.size; sApproved.innerText=aSnap.size; sReq.innerText=rSnap.size;
+ let h=""; pSnap.forEach(d=>{let o=d.data(); h+=`<div class="card driver-item"><b>${o.name}</b> - ${o.phone} <span class="badge" style="background:orange">معلق</span><br><button class="btn approve" onclick="approve('${d.id}','${o.name}')">اعتماد</button> <button class="btn reject" onclick="reject('${d.id}','${o.name}')">رفض</button></div>`});
+ pending.innerHTML=h||"لا يوجد";
+ let h2=""; aSnap.forEach(d=>{h2+=`<div class="card driver-item">✅ ${d.data().name} - ${d.data().phone}</div>`});
+ approved.innerHTML=h2;
+ let h3=""; rSnap.forEach(d=>{let o=d.data(); h3+=`<div class="card">📦 ${o.name} | ${o.mouqataa}→${o.destArea}</div>`});
+ reqs.innerHTML=h3;
 }
 
-window.openVerify=(id)=>{
-  let o=driversCache[id];
-  if(!o) return;
-  document.getElementById('verifyContent').innerHTML=`
-  <p><b>الاسم:</b> ${o.name}</p>
-  <p><b>الهاتف:</b> ${o.phone}</p>
-  <p><b>السيارة:</b> ${o.vehicle}</p>
-  <p><b>اللوحة:</b> ${o.plate}</p>
-  <img src="${o.photoBase64||''}" style="width:100%;border-radius:10px;margin-top:10px">
-  <img src="${o.idPhotoBase64||''}" style="width:100%;border-radius:10px;margin-top:10px">
-  <div style="display:flex;gap:8px;margin-top:10px">
-  <button class="btn approve" style="flex:1" onclick="approveDriver('${id}');closeModal()">✅ اعتماد</button>
-  <button class="btn reject" style="flex:1" onclick="rejectDriver('${id}');closeModal()">❌ رفض</button>
-  </div>`;
-  document.getElementById('verifyModal').classList.add('active');
+window.approve=async(id,name)=>{
+ await updateDoc(doc(db,"drivers",id),{status:"approved", approvedAt:serverTimestamp(), approvedBy:auth.currentUser.email});
+ await addDoc(collection(db,"logs"),{action:"approve", driverId:id, driverName:name, by:auth.currentUser.email, at:serverTimestamp()});
+ alert("تم الاعتماد");
+};
+window.reject=async(id,name)=>{
+ if(!confirm("تأكيد الرفض؟")) return;
+ await deleteDoc(doc(db,"drivers",id));
+ await addDoc(collection(db,"logs"),{action:"reject", driverId:id, driverName:name, by:auth.currentUser.email, at:serverTimestamp()});
 };
 
-window.closeModal=()=>document.getElementById('verifyModal').classList.remove('active');
-window.approveDriver=async(id)=>{await updateDoc(doc(db,"drivers",id),{status:"approved", approvedAt:new Date()}); loadAll();};
-window.rejectDriver=async(id)=>{ if(!confirm("حذف نهائيا؟")) return; await deleteDoc(doc(db,"drivers",id)); loadAll();};
+// أمان: خروج تلقائي بعد 15 دقيقة
+let timer; function resetTimer(){ clearTimeout(timer); timer=setTimeout(()=>{alert("انتهت الجلسة"); logout();}, 15*60*1000); }
+['click','mousemove','keypress'].forEach(e=>document.addEventListener(e,resetTimer));
+window.filter=()=>{let q=search.value.toLowerCase(); document.querySelectorAll('.driver-item').forEach(el=>{el.style.display=el.innerText.toLowerCase().includes(q)?'block':'none'})};
 </script>
 </body>
 </html>
