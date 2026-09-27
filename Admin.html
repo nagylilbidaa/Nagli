@@ -22,7 +22,7 @@ input{width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;margin:6px
 <body>
 <div id="loginBox" class="card" style="max-width:380px;margin:90px auto;text-align:center">
 <h2>👑 دخول الإدارة</h2>
-<input id="email" type="email" placeholder="naqlylilbidaa@gmail.com" value="naqlylilbidaa@gmail.com">
+<input id="email" type="email" placeholder="naglylilbidaa@gmail.com" value="naglylilbidaa@gmail.com">
 <input id="pass" type="password" placeholder="كلمة السر">
 <button class="btn approve" style="width:100%" onclick="login()">دخول آمن</button>
 <p id="err" style="color:red"></p>
@@ -49,7 +49,7 @@ import { db } from "./firebase.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { collection, getDocs, query, where, updateDoc, doc, deleteDoc, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const ALLOWED_ADMINS = ["naqlylilbidaa@gmail.com"]; // غيره لإيميلك الحقيقي
+const ALLOWED_ADMINS = ["naglylilbidaa@gmail.com"]; // غيره لإيميلك الحقيقي
 const auth = getAuth();
 let map;
 
