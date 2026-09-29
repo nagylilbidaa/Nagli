@@ -1,22 +1,51 @@
 {
-  "name": "نقلي للبضائع",
+  "id": "/",
+  "name": "نقلي - نقل البضائع",
   "short_name": "نقلي",
-  "start_url": "./index.html",
+  "description": "أسرع تطبيق لنقل البضائع والطرود داخل موريتانيا - نواكشوط وجميع الولايات",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#00b894",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "orientation": "portrait",
+  "background_color": "#ffffff",
   "theme_color": "#00b894",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["business", "travel", "utilities"],
   "icons": [
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
     {
       "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
-  "id": "Nagli6f-321",
-  "description": "This app aims to facilitate the transporte of goods for citezens , companies ,market and shop by prividing suitable and efficient means of transportation quikly for everyone"
+  "screenshots": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "طلب نقل جديد",
+      "url": "/",
+      "description": "اطلب نقل بضائعك الآن"
+    }
+  ]
 }
