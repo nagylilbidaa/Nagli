@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نقلي - الزبون</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#27ae60">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -23,19 +25,30 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-
 .v-wawa{background:linear-gradient(135deg,#e3f2fd,#90caf9)}
 .v-med{background:linear-gradient(135deg,#e8f5e9,#a5d6a7)}
 .v-big{background:linear-gradient(135deg,#fce4ec,#f48fb1)}
+#loginOverlay{position:fixed;inset:0;background:#f5f7fa;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px}
 </style>
 </head>
 <body>
 
+<div id="loginOverlay">
+  <div class="card" style="width:100%;max-width:380px;text-align:center">
+    <h2 style="color:#27ae60;margin:0">🚚 نقلي</h2>
+    <p style="color:#555">مرحبا! سجل دخولك للمتابعة</p>
+    <label class="label" style="text-align:right">الاسم الكامل *</label>
+    <input id="loginName" placeholder="مثال: محمد أحمد">
+    <label class="label" style="text-align:right">رقم الهاتف *</label>
+    <input id="loginPhone" placeholder="مثال: 22201234" type="tel">
+    <button class="btn" onclick="doLogin()">✅ دخول</button>
+  </div>
+</div>
+
 <a class="btn btn-call-top" href="tel:+22232448538">📞 طلب باتصال سريع - 32449538</a>
 <h2 style="text-align:center;color:#27ae60">🚚 نقلي - طلب توصيل</h2>
-
 <div class="card">
 <label class="label">الاسم الكامل *</label>
 <input id="cName" placeholder="مثال: محمد أحمد">
 <label class="label">رقم الهاتف *</label>
 <input id="cPhone" placeholder="مثال: 22201234">
-
 <label class="label">نوع السيارة *</label>
 <div class="vehicles" id="vehicles">
 <div class="v-card v-taxi" data-v="تاكسي">🚕<br><b>تاكسي</b><br><small>1500 MRU</small></div>
@@ -43,7 +56,6 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-
 <div class="v-card v-med" data-v="شاحنة متوسطة 3 طن">🚚<br><b>متوسطة 3 طن</b><br><small>6000 MRU</small></div>
 <div class="v-card v-big" data-v="شاحنة كبيرة 10 طن">🚛<br><b>كبيرة 10 طن</b><br><small>10000 MRU</small></div>
 </div>
-
 <label class="label">نوع البضاعة *</label>
 <select id="gType"><option value="">اختر...</option><option>أثاث منزلي</option><option>مواد غذائية</option><option>مستندات وأوراق</option><option>أجهزة كهربائية</option><option>مواد بناء</option><option>أخرى</option></select>
 <label class="label">وصف البضاعة *</label><textarea id="gDesc" rows="2" placeholder="مثال: ثلاجة + طاولة..."></textarea>
@@ -53,25 +65,40 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-
 <label class="label">المنطقة المتوجه إليها *</label><input id="destArea" placeholder="مثال: نواذيبو - كيفة...">
 <div class="price" id="priceBox">💰 مبلغ الرحلة: 4000 MRU - واوا</div>
 </div>
-
 <div class="card">
 <label class="label">📍 حدد موقعك على الخريطة - نواكشوط *</label>
 <div id="map"></div>
 <p id="mapStatus" style="color:red;text-align:center;margin-top:8px">اضغط على الخريطة لتحديد موقعك الحالي</p>
 </div>
-
 <button class="btn" id="sendBtn">✅ إرسال الطلب الآن</button>
 <button class="btn btn-cancel" id="cancelBtn">❌ إلغاء الطلب</button>
 <div id="msg"></div>
 
+<script>
+function doLogin(){
+  let n=document.getElementById('loginName').value.trim();
+  let p=document.getElementById('loginPhone').value.trim();
+  if(n.length<3) return alert('⚠️ أدخل اسمك الكامل');
+  if(p.length<8) return alert('⚠️ أدخل رقم هاتف صحيح');
+  localStorage.setItem('naqli_name', n);
+  localStorage.setItem('naqli_phone', p);
+  document.getElementById('loginOverlay').style.display='none';
+  document.getElementById('cName').value=n;
+  document.getElementById('cPhone').value=p;
+}
+(function checkLogin(){
+  let savedName=localStorage.getItem('naqli_name');
+  let savedPhone=localStorage.getItem('naqli_phone');
+  if(savedName && savedPhone){
+    document.getElementById('loginOverlay').style.display='none';
+  }
+})();
+</script>
 <script type="module">
 import { db } from "./firebase.js";
 import { collection, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
 const prices={"تاكسي":1500,"واوا":4000,"شاحنة متوسطة 3 طن":6000,"شاحنة كبيرة 10 طن":10000};
 let selVehicle="واوا"; let userLatLng=null; let lastId=localStorage.getItem('naqli_lastId'); let map,marker;
-
-// ✅ إصلاح اختيار السيارات
 document.querySelectorAll('.v-card').forEach(card=>{
 card.addEventListener('click',()=>{
 document.querySelectorAll('.v-card').forEach(c=>c.classList.remove('selected'));
@@ -80,7 +107,6 @@ selVehicle=card.dataset.v;
 document.getElementById('priceBox').textContent=`💰 مبلغ الرحلة: ${prices[selVehicle]} MRU - ${selVehicle}`;
 });
 });
-
 function initMap(){
 map=L.map('map').setView([18.0735,-15.9582],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
@@ -95,11 +121,9 @@ s.style.color="green";
 setTimeout(()=>{ map.invalidateSize(); },800);
 }
 window.addEventListener('load',initMap);
-
 document.getElementById('cName').value=localStorage.getItem('naqli_name')||"";
 document.getElementById('cPhone').value=localStorage.getItem('naqli_phone')||"";
 if(lastId) document.getElementById('cancelBtn').style.display="block";
-
 document.getElementById('sendBtn').onclick=async()=>{
 let data={
 name:cName.value.trim(),phone:cPhone.value.trim(),vehicle:selVehicle,
@@ -117,7 +141,6 @@ msg.innerHTML=`<div style="background:#e8f5e9;padding:14px;border-radius:12px;bo
 cancelBtn.style.display="block";
 }catch(e){ msg.textContent="خطأ: "+e.message; }
 };
-
 document.getElementById('cancelBtn').onclick=async()=>{
 let id=lastId||localStorage.getItem('naqli_lastId');
 if(!id) return;
