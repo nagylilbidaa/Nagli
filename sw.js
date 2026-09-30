@@ -1,63 +1,53 @@
-const CACHE_NAME = 'naqli-cache-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+const CACHE = "naqli-v3";
+const ASSETS = [
+  "./",
+  "./index.html",
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
-// التثبيت - حفظ الملفات
-self.addEventListener('install', (event) => {
+self.addEventListener("install", (e) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache).catch(() => {});
+  e.waitUntil(
+    caches.open(CACHE).then((c) => {
+      return c.addAll(ASSETS);
     })
   );
 });
 
-// التفعيل - حذف الكاش القديم
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+self.addEventListener("activate", (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(keys.map((n) => {
+        if (n !== CACHE) {
+          return caches.delete(n);
+        }
+      }));
+    })
   );
+  self.clients.claim();
 });
 
-// جلب البيانات - يعمل حتى بدون انترنت
-self.addEventListener('fetch', (event) => {
-  // تجاهل الطلبات غير http
-  if (!event.request.url.startsWith('http')) return;
-
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      // إذا موجود في الكاش ارجعه
-      if (response) {
-        return response;
-      }
-      // إلا جلبه من الشبكة وحفظه
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
+self.addEventListener("fetch", (e) => {
+  if (!e.request.url.startsWith("http")) return;
+  
+  e.respondWith(
+    caches.match(e.request).then((cached) => {
+      return cached || fetch(e.request).then((res) => {
+        // لا تحفظ طلبات خارجية
+        if (!e.request.url.includes(self.location.origin)) {
+          return res;
         }
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-        return networkResponse;
+        const clone = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, clone));
+        return res;
       }).catch(() => {
-        // في حال لا انترنت ولا كاش
-        if (event.request.destination === 'document') {
-          return caches.match('/index.html');
+        // إذا فشل النت و المستخدم يطلب صفحة
+        if (e.request.mode === 'navigate') {
+          return caches.match('./index.html');
         }
+        return null;
       });
     })
   );
