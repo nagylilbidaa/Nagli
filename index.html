@@ -29,7 +29,15 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-
 </style>
 </head>
 <body>
-
+  <script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+      .then(reg => console.log('SW مسجل'))
+      .catch(err => console.log('فشل تسجيل SW'));
+  });
+}
+</script>
 <div id="loginOverlay">
   <div class="card" style="width:100%;max-width:380px;text-align:center">
     <h2 style="color:#27ae60;margin:0">🚚 نقلي</h2>
