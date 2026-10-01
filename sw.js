@@ -1,4 +1,4 @@
-const CACHE = "naqli-v3";
+const CACHE = "naqli-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -11,7 +11,9 @@ self.addEventListener("install", (e) => {
   self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE).then((c) => {
-      return c.addAll(ASSETS);
+      return Promise.allSettled(
+        ASSETS.map(url => c.add(url).catch(err => console.log("فشل cache", url)))
+      );
     })
   );
 });
@@ -20,7 +22,7 @@ self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(keys.map((n) => {
-        if (n !== CACHE) {
+        if (n!== CACHE) {
           return caches.delete(n);
         }
       }));
@@ -31,23 +33,18 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if (!e.request.url.startsWith("http")) return;
-  
   e.respondWith(
     caches.match(e.request).then((cached) => {
       return cached || fetch(e.request).then((res) => {
-        // لا تحفظ طلبات خارجية
-        if (!e.request.url.includes(self.location.origin)) {
-          return res;
+        if (e.request.mode === 'navigate') {
+          const clone = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, clone));
         }
-        const clone = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, clone));
         return res;
       }).catch(() => {
-        // إذا فشل النت و المستخدم يطلب صفحة
         if (e.request.mode === 'navigate') {
           return caches.match('./index.html');
         }
-        return null;
       });
     })
   );
