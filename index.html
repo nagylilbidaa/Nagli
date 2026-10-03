@@ -2,166 +2,163 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نقلي - السائق</title>
+<title>نقلي - الزبون</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#FFC107">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-*{box-sizing:border-box;font-family:Tajawal,Arial} body{background:#f5f7fa;margin:0;padding:12px}
+*{box-sizing:border-box;font-family:Tajawal,Arial}
+body{background:#f5f7fa;margin:0;padding:12px}
 .card{background:#fff;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.07)}
-input,select{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:10px;margin:6px 0}
-.btn{width:100%;padding:14px;background:#0a3d62;color:#fff;border:0;border-radius:12px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:8px}
-.btn-green{background:#27ae60}
-.btn-blue{background:#2196F3}
-.btn-whats{background:#25D366}
-.file-label{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1.5px dashed #0a3d62;padding:12px;border-radius:10px;margin:6px 0;cursor:pointer}
-.file-label.ok{border-color:#27ae60;background:#e8f5e9}
-#imgModal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:999;align-items:center;justify-content:center}
-#imgModal img{max-width:92%;max-height:92%;border-radius:12px;border:3px solid #fff}
-.eye{ background:#0a3d62;color:#fff;padding:4px 10px;border-radius:6px;font-size:13px;cursor:pointer}
-.acceptedBox{background:#e8f5e9;border:2px solid #27ae60;border-radius:12px;padding:15px;margin:12px 0}
-.phoneNum{font-size:26px;font-weight:bold;color:#0a3d62;direction:ltr;text-align:center;margin:10px 0}
+input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:10px;margin:7px 0;font-size:15px}
+#map{height:400px;width:100%;border-radius:12px;border:2px solid #27ae60;z-index:1}
+.price{ background:#e8f5e9; border:1px dashed #27ae60; padding:12px; border-radius:10px; text-align:center; font-weight:bold; font-size:18px; margin-top:10px}
+.btn{width:100%;padding:14px;background:#27ae60;color:#fff;border:0;border-radius:12px;font-size:18px;font-weight:bold;cursor:pointer;margin-top:8px}
+.btn-call-top{background:#0a3d62;text-decoration:none;display:block;text-align:center}
+.btn-cancel{background:#e74c3c;display:none}
+.label{font-weight:bold;margin-top:8px;display:block;color:#333}
+.vehicles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.v-card{padding:14px;border-radius:12px;border:2px solid #eee;cursor:pointer;text-align:center;user-select:none}
+.v-card.selected{border-color:#27ae60;box-shadow:0 4px 12px rgba(39,174,96,.4);transform:scale(1.02)}
+.v-taxi{background:linear-gradient(135deg,#fff9c4,#ffeb3b)}
+.v-wawa{background:linear-gradient(135deg,#e3f2fd,#90caf9)}
+.v-med{background:linear-gradient(135deg,#e8f5e9,#a5d6a7)}
+.v-big{background:linear-gradient(135deg,#fce4ec,#f48fb1)}
+#loginOverlay{position:fixed;inset:0;background:#f5f7fa;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px}
 </style>
 </head>
 <body>
-<h2 style="text-align:center;color:#0a3d62">🚛 نقلي - السائق</h2>
-<div class="card" id="regCard">
-<h3>📝 تسجيل سائق جديد</h3>
-<input id="dName" placeholder="الاسم الكامل *">
-<input id="dPhone" placeholder="رقم الهاتف *">
-<select id="dVehicle"><option>تاكسي</option><option>واوا</option><option>شاحنة متوسطة 3 طن</option><option>شاحنة كبيرة 10 طن</option></select>
-<input id="dPlate" placeholder="لوحة السيارة *">
-<label>📸 صورة شخصية *</label>
-<div class="file-label" id="label1"><span>اختر الصورة</span><span id="t1">📁</span></div>
-<input type="file" id="dPhoto" accept="image/*" hidden>
-<label>🪪 صورة بطاقة التعريف *</label>
-<div class="file-label" id="label2"><span>اختر الصورة</span><span id="t2">📁</span></div>
-<input type="file" id="dIdPhoto" accept="image/*" hidden>
-<button class="btn" id="regBtn">إرسال للموافقة - سيتم حفظ معلوماتك بأمان</button>
-<div id="regMsg"></div>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+     .then(reg => console.log('SW مسجل'))
+     .catch(err => console.log('فشل تسجيل SW'));
+  });
+}
+</script>
+<div id="loginOverlay">
+  <div class="card" style="width:100%;max-width:380px;text-align:center">
+    <h2 style="color:#27ae60;margin:0">🚚 نقلي</h2>
+    <p style="color:#555">مرحبا! سجل دخولك للمتابعة</p>
+    <label class="label" style="text-align:right">الاسم الكامل *</label>
+    <input id="loginName" placeholder="مثال: محمد أحمد">
+    <label class="label" style="text-align:right">رقم الهاتف *</label>
+    <input id="loginPhone" placeholder="مثال: 22201234" type="tel">
+    <button class="btn" onclick="doLogin()">✅ دخول</button>
+  </div>
 </div>
 
-<div class="card" id="loginCard">
-<h3>🔑 دخول السائق المعتمد</h3>
-<input id="loginPhone" placeholder="رقم هاتفك">
-<button class="btn btn-green" id="loginBtn">دخول</button>
+<a class="btn btn-call-top" href="tel:+22232449538">📞 طلب باتصال سريع </a>
+<h2 style="text-align:center;color:#27ae60">🚚 نقلي - طلب توصيل</h2>
+<div class="card">
+<label class="label">الاسم الكامل *</label>
+<input id="cName" placeholder="مثال: محمد أحمد">
+<label class="label">رقم الهاتف *</label>
+<input id="cPhone" placeholder="مثال: 22201234">
+<label class="label">نوع السيارة *</label>
+<div class="vehicles" id="vehicles">
+<div class="v-card v-taxi" data-v="تاكسي">🚕<br><b>تاكسي</b><br><small>1500 MRU</small></div>
+<div class="v-card v-wawa selected" data-v="واوا">🛻<br><b>واوا</b><br><small>4000 MRU</small></div>
+<div class="v-card v-med" data-v="شاحنة متوسطة 3 طن">🚚<br><b>متوسطة 3 طن</b><br><small>6000 MRU</small></div>
+<div class="v-card v-big" data-v="شاحنة كبيرة 10 طن">🚛<br><b>كبيرة 10 طن</b><br><small>10000 MRU</small></div>
 </div>
+<label class="label">نوع البضاعة *</label>
+<select id="gType"><option value="">اختر...</option><option>أثاث منزلي</option><option>مواد غذائية</option><option>مستندات وأوراق</option><option>أجهزة كهربائية</option><option>مواد بناء</option><option>أخرى</option></select>
+<label class="label">وصف البضاعة *</label><textarea id="gDesc" rows="2" placeholder="مثال: ثلاجة + طاولة..."></textarea>
+<label class="label">مكان الاستلام - مقاطعة نواكشوط *</label>
+<select id="pickM"><option value="">اختر المقاطعة...</option><option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>دار النعيم</option><option>الرياض</option><option>الميناء</option><option>السبخة</option></select>
+<label class="label">المنطقة / الحي</label><input id="pickArea" placeholder="مثال: قرب مسجد...">
+<label class="label">المنطقة المتوجه إليها *</label><input id="destArea" placeholder="مثال: نواذيبو - كيفة...">
+<div class="price" id="priceBox">💰 مبلغ الرحلة: 4000 MRU - واوا</div>
+</div>
+<div class="card">
+<label class="label">📍 حدد موقعك على الخريطة - نواكشوط *</label>
+<div id="map"></div>
+<p id="mapStatus" style="color:red;text-align:center;margin-top:8px">اضغط على الخريطة لتحديد موقعك الحالي</p>
+</div>
+<button class="btn" id="sendBtn">✅ إرسال الطلب الآن</button>
+<button class="btn btn-cancel" id="cancelBtn">❌ إلغاء الطلب</button>
+<div id="msg"></div>
 
-<div id="driverInfo"></div>
-<div id="acceptedOrder"></div>
-<div id="orders"></div>
-<div id="imgModal" onclick="this.style.display='none'"><img id="modalImg"></div>
-
+<script>
+function doLogin(){
+  let n=document.getElementById('loginName').value.trim();
+  let p=document.getElementById('loginPhone').value.trim();
+  if(n.length<3) return alert('⚠️ أدخل اسمك الكامل');
+  if(p.length<8) return alert('⚠️ أدخل رقم هاتف صحيح');
+  localStorage.setItem('naqli_name', n);
+  localStorage.setItem('naqli_phone', p);
+  document.getElementById('loginOverlay').style.display='none';
+  document.getElementById('cName').value=n;
+  document.getElementById('cPhone').value=p;
+}
+(function checkLogin(){
+  let savedName=localStorage.getItem('naqli_name');
+  let savedPhone=localStorage.getItem('naqli_phone');
+  if(savedName && savedPhone){
+    document.getElementById('loginOverlay').style.display='none';
+  }
+})();
+</script>
 <script type="module">
 import { db } from "./firebase.js";
-import { collection, addDoc, getDocs, getDoc, query, where, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-let url1="", url2="";
-label1.onclick=()=>dPhoto.click();
-label2.onclick=()=>dIdPhoto.click();
-
-function compress(file){
- return new Promise(res=>{
-  let r=new FileReader();
-  r.onload=e=>{
-   let img=new Image();
-   img.onload=()=>{
-    let c=document.createElement('canvas');
-    let w=img.width, h=img.height;
-    if(w>600){ h=h*600/w; w=600; }
-    c.width=w; c.height=h;
-    c.getContext('2d').drawImage(img,0,0,w,h);
-    res(c.toDataURL('image/jpeg',0.5));
-   };
-   img.src=e.target.result;
-  };
-  r.readAsDataURL(file);
- });
-}
-
-dPhoto.onchange=e=>{
- let f=e.target.files[0]; if(!f) return;
- url1=URL.createObjectURL(f);
- label1.classList.add('ok');
- t1.innerHTML=`✅ تم <span class="eye" onclick="event.stopPropagation(); show1()">👁️</span>`;
-};
-dIdPhoto.onchange=e=>{
- let f=e.target.files[0]; if(!f) return;
- url2=URL.createObjectURL(f);
- label2.classList.add('ok');
- t2.innerHTML=`✅ تم <span class="eye" onclick="event.stopPropagation(); show2()">👁️</span>`;
-};
-
-window.show1=()=>{ modalImg.src=url1; imgModal.style.display='flex'; }
-window.show2=()=>{ modalImg.src=url2; imgModal.style.display='flex'; }
-
-let curDriver=null;
-regBtn.onclick=async()=>{
-let name=dName.value.trim(), phone=dPhone.value.trim(), vehicle=dVehicle.value, plate=dPlate.value.trim();
-if(!name||!phone||!plate||!dPhoto.files[0]||!dIdPhoto.files[0]) return alert("⚠️ أكمل جميع البيانات والصور");
-regMsg.textContent="⏳ جاري ضغط وحفظ الصور بأمان...";
-try{
-let photoBase64=await compress(dPhoto.files[0]);
-let idPhotoBase64=await compress(dIdPhoto.files[0]);
-let data={name,phone,vehicle,plate,photoBase64,idPhotoBase64,status:"pending",createdAt:new Date(), secure:true};
-await addDoc(collection(db,"drivers"),data);
-regMsg.innerHTML="<div style='background:#e8f5e9;padding:10px;border-radius:10px;color:green'>✅ تم حفظ معلوماتك بأمان، انتظر موافقة المسؤول في admin.html</div>";
-}catch(e){ regMsg.textContent="خطأ: "+e.message; }
-};
-
-loginBtn.onclick=async()=>{
-let q=query(collection(db,"drivers"),where("phone","==",loginPhone.value.trim()));
-let snap=await getDocs(q);
-if(snap.empty) return alert("رقم غير موجود");
-let d=snap.docs[0]; let o=d.data();
-if(o.status!="approved") return alert("⏳ لم تتم الموافقة بعد");
-curDriver={id:d.id,...o};
-driverInfo.innerHTML=`<div class="card" style="border:2px solid #27ae60"><b>مرحبا ${o.name}</b> - ${o.vehicle}<br>معتمد ✅</div>`;
-regCard.style.display='none';
-loginCard.style.display='none';
-loadOrders();
-};
-
-async function loadOrders(){
-let q=query(collection(db,"requests"),where("vehicle","==",curDriver.vehicle),where("status","==","new"));
-let snap=await getDocs(q);
-let h="";
-snap.forEach(s=>{
-let o=s.data();
-h+=`<div class="card"><b>${o.mouqataa} → ${o.destArea}</b><br>${o.goodsDesc||''}<br>💰 ${o.price} MRU<br><button class="btn btn-green" onclick="acceptOrder('${s.id}')">قبول الطلب</button></div>`;
+import { collection, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+const prices={"تاكسي":1500,"واوا":4000,"شاحنة متوسطة 3 طن":6000,"شاحنة كبيرة 10 طن":10000};
+let selVehicle="واوا"; let userLatLng=null; let lastId=localStorage.getItem('naqli_lastId'); let map,marker;
+document.querySelectorAll('.v-card').forEach(card=>{
+card.addEventListener('click',()=>{
+document.querySelectorAll('.v-card').forEach(c=>c.classList.remove('selected'));
+card.classList.add('selected');
+selVehicle=card.dataset.v;
+document.getElementById('priceBox').textContent=`💰 مبلغ الرحلة: ${prices[selVehicle]} MRU - ${selVehicle}`;
 });
-orders.innerHTML=h||"لا يوجد طلبات جديدة";
+});
+function initMap(){
+map=L.map('map').setView([18.0735,-15.9582],12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+map.on('click',e=>{
+userLatLng=e.latlng;
+if(marker) map.removeLayer(marker);
+marker=L.marker(e.latlng).addTo(map).bindPopup("موقع الاستلام").openPopup();
+let s=document.getElementById('mapStatus');
+s.textContent="✅ تم تحديد الموقع: "+e.latlng.lat.toFixed(4);
+s.style.color="green";
+});
+setTimeout(()=>{ map.invalidateSize(); },800);
 }
-
-// --- التعديل الجديد هنا ---
-window.acceptOrder=async(id)=>{
+window.addEventListener('load',initMap);
+document.getElementById('cName').value=localStorage.getItem('naqli_name')||"";
+document.getElementById('cPhone').value=localStorage.getItem('naqli_phone')||"";
+if(lastId) document.getElementById('cancelBtn').style.display="block";
+document.getElementById('sendBtn').onclick=async()=>{
+let data={
+name:cName.value.trim(),phone:cPhone.value.trim(),vehicle:selVehicle,
+goodsType:gType.value,goodsDesc:gDesc.value.trim(),
+mouqataa:pickM.value,pickArea:pickArea.value.trim(),destArea:destArea.value.trim(),
+price:prices[selVehicle],lat:userLatLng?.lat,lng:userLatLng?.lng,status:"new",progress:10,createdAt:new Date()
+};
+if(!data.name||!data.phone||!data.goodsDesc||!data.mouqataa||!data.destArea||!userLatLng) return alert("⚠️ أكمل جميع الحقول وحدد موقعك على الخريطة بالضغط عليها");
+localStorage.setItem('naqli_name',data.name); localStorage.setItem('naqli_phone',data.phone);
+msg.textContent="⏳ جاري الإرسال...";
 try{
-  // 1. احضر بيانات الطلب قبل التحديث لتعرف رقم الزبون
-  let reqRef = doc(db,"requests",id);
-  let reqSnap = await getDoc(reqRef);
-  if(!reqSnap.exists()) return alert("الطلب غير موجود");
-  let reqData = reqSnap.data();
-
-  // رقم الزبون قد يكون customerPhone أو phone أو clientPhone
-  let customerPhone = reqData.customerPhone || reqData.phone || reqData.clientPhone || "غير موجود";
-  let customerName = reqData.customerName || reqData.clientName || "الزبون";
-
-  // 2. حدث الطلب
-  await updateDoc(reqRef,{status:"accepted", driverName:curDriver.name, driverPhone:curDriver.phone, progress:50});
-
-  // 3. اعرض رقم الزبون مباشرة
-  acceptedOrder.innerHTML = `
-    <div class="acceptedBox">
-      <h3 style="margin:0">✅ تم قبول الطلب</h3>
-      <p><b>الزبون:</b> ${customerName}</p>
-      <p><b>المسار:</b> ${reqData.mouqataa} → ${reqData.destArea}</p>
-      <p>📞 رقم الزبون:</p>
-      <div class="phoneNum">${customerPhone}</div>
-      <button class="btn btn-blue" onclick="window.location.href='tel:${customerPhone}'">📞 اتصال مباشر</button>
-      <button class="btn btn-whats" onclick="window.open('https://wa.me/${customerPhone.replace(/[^0-9]/g,'')}','_blank')">💬 فتح واتساب</button>
-      <button class="btn" style="background:#555;margin-top:12px" onclick="acceptedOrder.innerHTML=''; loadOrders()">🔙 رجوع للطلبات</button>
-    </div>
-  `;
-  orders.innerHTML = "";
-  window.scrollTo(0,0);
-}catch(e){ alert("خطأ: "+e.message); }
+let ref=await addDoc(collection(db,"requests"),data);
+lastId=ref.id; localStorage.setItem('naqli_lastId',lastId);
+msg.innerHTML=`<div style="background:#e8f5e9;padding:14px;border-radius:12px;border:1px solid #27ae60">✅ تم الإرسال بنجاح يا ${data.name}!</div>`;
+cancelBtn.style.display="block";
+}catch(e){ msg.textContent="خطأ: "+e.message; }
+};
+document.getElementById('cancelBtn').onclick=async()=>{
+let id=lastId||localStorage.getItem('naqli_lastId');
+if(!id) return;
+if(!confirm("هل تريد إلغاء طلبك؟")) return;
+await deleteDoc(doc(db,"requests",id));
+msg.innerHTML=`<div style="background:#ffebee;padding:10px;border-radius:10px;color:#c62828">❌ تم إلغاء الطلب</div>`;
+cancelBtn.style.display="none"; localStorage.removeItem('naqli_lastId'); lastId=null;
 };
 </script>
 </body>
