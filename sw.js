@@ -1,4 +1,4 @@
-const CACHE = "naqli-v5"; // غيرت الرقم لـ v5 ليجبر التحديث
+const CACHE = "naqli-v5";  
 const ASSETS = [
   "./",
   "./index.html",
@@ -59,6 +59,3 @@ self.addEventListener("fetch", (e) => {
     })
   );
 });
-
-
-سيعمل الجديد الآن.
