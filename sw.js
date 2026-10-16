@@ -1,51 +1,57 @@
-const CACHE = "naqli-v4";
-const ASSETS = [
-  "./",
-  "./index.html",
-  "./manifest.json",
-  "./icon-192.png",
-  "./icon-512.png"
+const CACHE_NAME = 'nagli-v10';
+const FILES_TO_CACHE = [
+  './',
+  './index.html',
+  './driver.html',
+  './admin.html',
+  './firebase.js',
+  './manifest.json'
 ];
 
-self.addEventListener("install", (e) => {
+// التثبيت - يحفظ الملفات
+self.addEventListener('install', event => {
   self.skipWaiting();
-  e.waitUntil(
-    caches.open(CACHE).then((c) => {
-      return Promise.allSettled(
-        ASSETS.map(url => c.add(url).catch(err => console.log("فشل cache", url)))
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      console.log('Caching files');
+      return cache.addAll(FILES_TO_CACHE);
+    })
+  );
+});
+
+// التفعيل - يمسح الكاش القديم
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keyList => {
+      return Promise.all(
+        keyList.map(key => {
+          if (key !== CACHE_NAME) {
+            console.log('Deleting old cache', key);
+            return caches.delete(key);
+          }
+        })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
-self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(keys.map((n) => {
-        if (n!== CACHE) {
-          return caches.delete(n);
-        }
-      }));
-    })
+// الجلب - يجرب الشبكة أولاً ثم الكاش
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    fetch(event.request, { cache: 'no-store' })
+      .then(response => {
+        // حدث الكاش بالنسخة الجديدة
+        return caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, response.clone());
+          return response;
+        });
+      })
+      .catch(() => {
+        // إذا لا يوجد انترنت، اعرض من الكاش
+        return caches.match(event.request);
+      })
   );
-  self.clients.claim();
 });
 
-self.addEventListener("fetch", (e) => {
-  if (!e.request.url.startsWith("http")) return;
-  e.respondWith(
-    caches.match(e.request).then((cached) => {
-      return cached || fetch(e.request).then((res) => {
-        if (e.request.mode === 'navigate') {
-          const clone = res.clone();
-          caches.open(CACHE).then((c) => c.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => {
-        if (e.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
-    })
-  );
-});
+
+هذا سيجبر المتصفح على تحديث كل شيء تلقائياً.
