@@ -1,57 +1,64 @@
-const CACHE_NAME = 'nagli-v10';
-const FILES_TO_CACHE = [
-  './',
-  './index.html',
-  './driver.html',
-  './admin.html',
-  './firebase.js',
-  './manifest.json'
+const CACHE = "naqli-v5"; // غيرت الرقم لـ v5 ليجبر التحديث
+const ASSETS = [
+  "./",
+  "./index.html",
+  "./driver.html",
+  "./admin.html",
+  "./firebase.js",
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
-// التثبيت - يحفظ الملفات
-self.addEventListener('install', event => {
+self.addEventListener("install", (e) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('Caching files');
-      return cache.addAll(FILES_TO_CACHE);
+  e.waitUntil(
+    caches.open(CACHE).then((c) => {
+      return Promise.allSettled(
+        ASSETS.map(url => c.add(url).catch(err => console.log("فشل cache", url)))
+      );
     })
   );
 });
 
-// التفعيل - يمسح الكاش القديم
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keyList => {
-      return Promise.all(
-        keyList.map(key => {
-          if (key !== CACHE_NAME) {
-            console.log('Deleting old cache', key);
-            return caches.delete(key);
-          }
-        })
-      );
+self.addEventListener("activate", (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(keys.map((n) => {
+        if (n !== CACHE) {
+          return caches.delete(n);
+        }
+      }));
     }).then(() => self.clients.claim())
   );
 });
 
-// الجلب - يجرب الشبكة أولاً ثم الكاش
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    fetch(event.request, { cache: 'no-store' })
-      .then(response => {
-        // حدث الكاش بالنسخة الجديدة
-        return caches.open(CACHE_NAME).then(cache => {
-          cache.put(event.request, response.clone());
-          return response;
-        });
-      })
-      .catch(() => {
-        // إذا لا يوجد انترنت، اعرض من الكاش
-        return caches.match(event.request);
-      })
+self.addEventListener("fetch", (e) => {
+  if (!e.request.url.startsWith("http")) return;
+
+  // لملفات HTML اجلب من الشبكة أولاً (مهم لـ driver.html)
+  if (e.request.mode === 'navigate' || e.request.url.includes('.html')) {
+    e.respondWith(
+      fetch(e.request, { cache: 'no-store' })
+        .then((res) => {
+          const clone = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, clone));
+          return res;
+        })
+        .catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // لباقي الملفات (صور، أيقونات) من الكاش أولاً
+  e.respondWith(
+    caches.match(e.request).then((cached) => {
+      return cached || fetch(e.request).then((res) => {
+        return res;
+      });
+    })
   );
 });
 
 
-هذا سيجبر المتصفح على تحديث كل شيء تلقائياً.
+سيعمل الجديد الآن.
