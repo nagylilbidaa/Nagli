@@ -3,140 +3,164 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نقلي - دخول السائقين</title>
+<title>نقلي - السائق</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;font-family:Tajawal,Arial}
 body{background:#eef2f7;margin:0;padding:12px}
-.card{background:#fff;border-radius:14px;padding:18px;margin:12px auto;max-width:420px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
-#map{height:320px;border-radius:12px;border:2px solid #0a3d62}
-.btn{width:100%;padding:13px;border:0;border-radius:10px;font-weight:bold;cursor:pointer;margin-top:10px;font-size:16px}
-.btn-blue{background:#0a3d62;color:#fff}.btn-green{background:#27ae60;color:#fff}.btn-gray{background:#eee;color:#333}
-input,select{width:100%;padding:12px;border:1.5px solid #ddd;border-radius:10px;margin:7px 0;font-size:15px}
-.link{text-align:center;margin-top:15px;color:#0a3d62;cursor:pointer;text-decoration:underline;font-weight:bold}
+.card{background:#fff;border-radius:14px;padding:16px;margin:10px auto;max-width:600px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+#map{height:340px;border-radius:12px;border:2px solid #0a3d62}
+.btn{width:100%;padding:13px;border:0;border-radius:10px;font-weight:bold;cursor:pointer;margin-top:8px;font-size:15px}
+.btn-green{background:#27ae60;color:#fff}.btn-blue{background:#0a3d62;color:#fff}.btn-red{background:#e74c3c;color:#fff}.btn-orange{background:#ff9800;color:#fff}.btn-gray{background:#eee;color:#333}
+input,select{width:100%;padding:11px;border:1.5px solid #ddd;border-radius:10px;margin:6px 0}
+.link{text-align:center;margin-top:12px;color:#0a3d62;cursor:pointer;text-decoration:underline;font-weight:bold}
 .hidden{display:none}
-.label{font-weight:bold;font-size:13px;margin-top:8px;display:block}
+.profit-box{background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border:2px solid #27ae60;border-radius:12px;padding:12px;text-align:center}
+.badge-new{animation:blink 1s infinite;background:#27ae60;color:#fff;padding:4px 8px;border-radius:6px}
+@keyframes blink{50%{opacity:.5}}
 </style>
 </head>
 <body>
 
-<!-- 1. شاشة الدخول للسائق المعتمد -->
+<!-- 1. دخول -->
 <div id="loginBox" class="card">
-  <h2 style="text-align:center;color:#0a3d62;margin:0 0 10px 0">🚕 دخول السائق</h2>
-  <p style="text-align:center;color:#666;font-size:13px;margin:0 0 10px 0">للسائقين المعتمدين فقط</p>
-  <label class="label">رقم الهاتف</label>
-  <input id="loginPhone" type="tel" placeholder="222xxxxxxxx">
-  <label class="label">كلمة السر</label>
+  <h2 style="text-align:center;color:#0a3d62">🚕 دخول السائق المعتمد</h2>
+  <input id="loginPhone" placeholder="رقم الهاتف">
   <input id="loginPass" type="password" placeholder="كلمة السر">
   <button class="btn btn-blue" onclick="loginDriver()">دخول</button>
   <div class="link" onclick="showRegister()">➕ تسجيل سائق جديد</div>
-  <p style="text-align:center;font-size:11px;color:#888;margin-top:12px">ربحك 90% - عمولة التطبيق 10% فقط</p>
 </div>
 
-<!-- 2. شاشة تسجيل سائق جديد (مخفية في البداية) -->
+<!-- 2. تسجيل جديد -->
 <div id="registerBox" class="card hidden">
   <h2 style="text-align:center;color:#0a3d62">📝 تسجيل سائق جديد</h2>
-  <label class="label">الاسم الكامل</label><input id="dName" placeholder="الاسم">
-  <label class="label">رقم الهاتف</label><input id="dPhone" type="tel" placeholder="222xxxxxxxx">
-  <label class="label">كلمة السر</label><input id="dPass" type="password" placeholder="اختر كلمة سر">
-  <label class="label">نوع المركبة</label>
-  <select id="dVehicle">
-    <option value="تاكسي">تاكسي - 100 MRU</option>
-    <option value="واوا">واوا - 150 MRU</option>
-    <option value="شاحنة متوسطة 3 طن">شاحنة متوسطة 3 طن - 600 MRU</option>
-    <option value="شاحنة كبيرة 10 طن">شاحنة كبيرة 10 طن - 1000 MRU</option>
-  </select>
-  <label class="label">رقم اللوحة</label><input id="dPlate" placeholder="رقم اللوحة">
-  <label class="label">صورة شخصية</label><input type="file" id="dPhoto" accept="image/*">
-  <label class="label">صورة بطاقة التعريف / رخصة السياقة</label><input type="file" id="dIdPhoto" accept="image/*">
-  <button class="btn btn-green" onclick="registerDriver()">✅ إرسال طلب التسجيل</button>
-  <div class="link" onclick="showLogin()">⬅️ الرجوع للدخول</div>
+  <input id="dName" placeholder="الاسم الكامل">
+  <input id="dPhone" placeholder="رقم الهاتف">
+  <input id="dPass" type="password" placeholder="كلمة السر">
+  <select id="dVehicle"><option>تاكسي</option><option>واوا</option><option>شاحنة متوسطة 3 طن</option><option>شاحنة كبيرة 10 طن</option></select>
+  <input id="dPlate" placeholder="رقم اللوحة">
+  <input type="file" id="dPhoto" accept="image/*">
+  <button class="btn btn-green" onclick="registerDriver()">إرسال الطلب</button>
+  <div class="link" onclick="showLogin()">⬅️ رجوع للدخول</div>
 </div>
 
-<!-- 3. لوحة السائق بعد الدخول -->
-<div id="mainBox" class="hidden" style="max-width:600px;margin:auto">
-  <h2 style="text-align:center;color:#0a3d62">🚕 مرحبا <span id="driverNameSpan"></span></h2>
-  <div class="card"><div id="map"></div><p id="gpsStatus" style="text-align:center">📍 GPS</p></div>
+<!-- 3. لوحة السائق - هذه هي الخطوة 3 كاملة بكل التحسينات -->
+<div id="mainBox" class="hidden" style="max-width:650px;margin:auto">
+  <div class="card">
+    <h3 style="margin:0;text-align:center">🗺️ موقعك المباشر</h3>
+    <div id="map"></div>
+    <p id="gpsStatus" style="text-align:center;color:#e74c3c">⏳ تفعيل GPS...</p>
+    <button class="btn btn-blue" id="onlineBtn" onclick="toggleOnline()">🟢 متصل - أستقبل الطلبات</button>
+  </div>
+
+  <div id="profitBox" class="profit-box hidden card">
+    <div>💰 طلبك الحالي</div>
+    <div id="profitText" style="font-size:22px;font-weight:bold">0 MRU</div>
+    <small id="profitDetail"></small>
+  </div>
+
   <div id="ordersList"></div>
-  <button class="btn btn-gray" onclick="logout()">خروج</button>
+  <button class="btn btn-gray" onclick="logout()" style="max-width:600px;margin:10px auto;display:block">خروج</button>
 </div>
+
+<audio id="notifSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
 
 <script type="module">
 import { db } from "./firebase.js";
 import { collection, addDoc, doc, updateDoc, onSnapshot, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-let driverId=localStorage.getItem('naqli_driverId'), driverData=null, map;
+let driverId=localStorage.getItem('naqli_driverId'), driverData=null, map, myMarker, isOnline=true, currentOrder=null, lastCount=0;
 
-function initMap(){ 
-  map=L.map('map').setView([18.0735,-15.9582],12); 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); 
-}
+function initMap(){ map=L.map('map').setView([18.0735,-15.9582],12); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); startGps(); }
 window.addEventListener('load',initMap);
 
 window.showRegister=()=>{ loginBox.classList.add('hidden'); registerBox.classList.remove('hidden'); }
 window.showLogin=()=>{ registerBox.classList.add('hidden'); loginBox.classList.remove('hidden'); }
 
-// دخول بالهاتف + كلمة السر
 window.loginDriver=async()=>{
   let phone=loginPhone.value.trim(), pass=loginPass.value.trim();
-  if(phone.length<8||!pass) return alert("أدخل الهاتف وكلمة السر");
-  let q=query(collection(db,"drivers"), where("phone","==",phone), where("password","==",pass), where("status","==","approved"));
-  let snap=await getDocs(q);
-  if(snap.empty) return alert("رقم أو كلمة سر خاطئة أو لم تتم الموافقة بعد");
-  let d=snap.docs[0]; driverId=d.id; driverData=d.data();
-  localStorage.setItem('naqli_driverId',driverId);
+  let snap=await getDocs(query(collection(db,"drivers"), where("phone","==",phone), where("password","==",pass), where("status","==","approved")));
+  if(snap.empty) return alert("بيانات خاطئة أو لم تتم الموافقة");
+  driverId=snap.docs[0].id; driverData=snap.docs[0].data(); localStorage.setItem('naqli_driverId',driverId);
   enterMain();
 };
 
-// تسجيل جديد
 window.registerDriver=async()=>{
   let name=dName.value.trim(), phone=dPhone.value.trim(), pass=dPass.value.trim(), vehicle=dVehicle.value, plate=dPlate.value.trim();
-  if(name.length<3||phone.length<8||!pass||!plate) return alert("أكمل جميع الحقول");
-  let photoBase64="", idPhotoBase64="";
-  if(dPhoto.files[0]) photoBase64=await toBase64(dPhoto.files[0]);
-  if(dIdPhoto.files[0]) idPhotoBase64=await toBase64(dIdPhoto.files[0]);
-  await addDoc(collection(db,"drivers"),{name,phone,password:pass,vehicle,plate,photoBase64,idPhotoBase64,status:"pending",balance:0,rating:5,createdAt:new Date()});
-  alert("تم إرسال طلبك، انتظر موافقة الإدارة وستدخل بنفس الهاتف وكلمة السر");
-  showLogin();
+  if(!name||!phone||!pass||!plate) return alert("أكمل البيانات");
+  let photoBase64=""; if(dPhoto.files[0]) photoBase64=await new Promise(r=>{let fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(dPhoto.files[0]);});
+  await addDoc(collection(db,"drivers"),{name,phone,password:pass,vehicle,plate,photoBase64,status:"pending",createdAt:new Date()});
+  alert("تم، انتظر الموافقة"); showLogin();
 };
-
-function toBase64(file){return new Promise(r=>{let fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(file);});}
 
 function enterMain(){
   loginBox.classList.add('hidden'); registerBox.classList.add('hidden'); mainBox.classList.remove('hidden');
-  driverNameSpan.textContent=driverData.name;
-  setTimeout(()=>map.invalidateSize(),500);
+  setTimeout(()=>{ map.invalidateSize(); },600);
   loadOrders();
 }
 
+function startGps(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.watchPosition(pos=>{
+    let lat=pos.coords.latitude, lng=pos.coords.longitude;
+    document.getElementById('gpsStatus').textContent=`✅ GPS نشط`; document.getElementById('gpsStatus').style.color="green";
+    if(myMarker) map.removeLayer(myMarker);
+    myMarker=L.marker([lat,lng]).addTo(map).bindPopup("موقعك");
+    map.setView([lat,lng],14);
+    if(driverId){ updateDoc(doc(db,"drivers",driverId),{lat,lng,lastSeen:new Date()}); if(currentOrder){ updateDoc(doc(db,"requests",currentOrder),{driverLat:lat,driverLng:lng}); } }
+  },e=>{ document.getElementById('gpsStatus').textContent="❌ فعّل GPS"; },{enableHighAccuracy:true});
+}
+
+window.toggleOnline=()=>{
+  isOnline=!isOnline;
+  document.getElementById('onlineBtn').textContent=isOnline?"🟢 متصل - أستقبل الطلبات":"🔴 غير متصل";
+  document.getElementById('onlineBtn').style.background=isOnline?"#0a3d62":"#e74c3c";
+};
+
 function loadOrders(){
   onSnapshot(query(collection(db,"requests"), orderBy("createdAt","desc")), snap=>{
-    let h=""; snap.forEach(s=>{
+    let h=""; let newOrders=0;
+    snap.forEach(s=>{
       let o=s.data();
-      if(o.status==='new'){
-        let profit=Math.round(o.price*0.90); // 10% عمولة
-        let comm=Math.round(o.price*0.10);
-        h+=`<div class="card"><b>📦 ${o.mouqataa} → ${o.destArea}</b><br>${o.name} - ${o.phone}<br>${o.vehicle} - ${o.price} MRU<br>
-        <div style="background:#e8f5e9;padding:8px;border-radius:8px;margin:8px 0;text-align:center">ربحك: <b style="color:#27ae60">${profit} MRU (90%)</b><br><small>عمولة التطبيق: ${comm} MRU</small></div>
-        <button class="btn btn-green" onclick="acceptOrder('${s.id}')">✅ قبول</button></div>`;
+      if(o.status==='new' && isOnline){
+        newOrders++;
+        let profit=Math.round(o.price*0.90); let comm=Math.round(o.price*0.10);
+        h+=`<div class="card" style="border-right:5px solid #27ae60"><span class="badge-new">جديد 🔔</span> <b>${o.mouqataa} → ${o.destArea}</b><br>${o.name} - ${o.phone}<br>${o.vehicle} - ${o.goodsDesc||''}<br>
+        <div style="background:#e8f5e9;padding:8px;border-radius:8px;margin:8px 0;text-align:center"><b>السعر الكلي ${o.price} MRU</b><br><span style="color:#27ae60">ربحك 90% = ${profit} MRU</span> | عمولة 10% = ${comm}</div>
+        <button class="btn btn-green" onclick="acceptOrder('${s.id}')">✅ قبول</button>
+        <button class="btn btn-red" onclick="rejectOrder('${s.id}')">❌ رفض</button>
+        <button class="btn btn-blue" onclick="openCustMap(${o.customerLat},${o.customerLng})">🗺️ موقع الزبون</button></div>`;
       }
-      if(o.driverId===driverId && o.status!=='completed'){
-        h+=`<div class="card" style="border:2px solid #0a3d62"><b>طلبك الحالي: ${o.mouqataa}</b><br>${o.name} ${o.phone}<br><a href="tel:${o.phone}"><button class="btn btn-blue">📞 اتصال</button></a><button class="btn btn-green" onclick="completeOrder('${s.id}')">تم التوصيل</button></div>`;
+      if(o.driverId===driverId && o.status!=='completed' && o.status!=='rejected'){
+        currentOrder=s.id; let profit=Math.round(o.price*0.90);
+        h+=`<div class="card" style="border:2px solid #0a3d62;background:#f0f7ff"><h3 style="margin:0">🚀 طلبك الحالي - ${o.mouqataa}</h3>الزبون: ${o.name} - ${o.phone}<br>السعر: ${o.price} | ربحك: ${profit}<br>
+        <a href="tel:${o.phone}"><button class="btn btn-blue">📞 اتصال بالزبون</button></a>
+        <button class="btn btn-orange" onclick="setOnWay('${s.id}')">🚚 أنا في الطريق (يرى الزبون موقعك)</button>
+        <button class="btn btn-green" onclick="completeOrder('${s.id}')">✅ تم التوصيل</button></div>`;
+        document.getElementById('profitBox').classList.remove('hidden'); document.getElementById('profitText').textContent=profit+" MRU ربحك"; document.getElementById('profitDetail').textContent=`من أصل ${o.price} MRU - عمولة 10%`;
       }
     });
-    document.getElementById('ordersList').innerHTML=h||"<div class='card' style='text-align:center;color:#888'>لا يوجد طلبات</div>";
+    // إشعار صوتي واهتزاز عند طلب جديد
+    if(newOrders>lastCount && lastCount!==0){
+      document.getElementById('notifSound').play().catch(()=>{});
+      if(navigator.vibrate) navigator.vibrate([300,100,300]);
+    }
+    lastCount=newOrders;
+    document.getElementById('ordersList').innerHTML=h||"<div class='card' style='text-align:center;color:#888'>لا يوجد طلبات حاليا</div>";
   });
 }
 
-window.acceptOrder=async(id)=>{ await updateDoc(doc(db,"requests",id),{status:"accepted",driverId:driverId,driverName:driverData.name}); alert("تم القبول"); }
-window.completeOrder=async(id)=>{ await updateDoc(doc(db,"requests",id),{status:"completed"}); alert("أحسنت!"); }
-window.logout=()=>{ localStorage.removeItem('naqli_driverId'); location.reload(); }
+window.acceptOrder=async(id)=>{ await updateDoc(doc(db,"requests",id),{status:"accepted",driverId:driverId,driverName:driverData.name,acceptedAt:new Date()}); alert("تم قبول الطلب - اتصل بالزبون"); };
+window.rejectOrder=async(id)=>{ await updateDoc(doc(db,"requests",id),{status:"rejected",rejectedBy:driverId}); };
+window.setOnWay=async(id)=>{ await updateDoc(doc(db,"requests",id),{status:"on_the_way"}); alert("الزبون الآن يرى موقعك المباشر"); };
+window.completeOrder=async(id)=>{ await updateDoc(doc(db,"requests",id),{status:"completed",completedAt:new Date()}); currentOrder=null; document.getElementById('profitBox').classList.add('hidden'); alert("أحسنت! تم إكمال الطلب"); };
+window.openCustMap=(lat,lng)=>{ if(!lat) return alert("لا يوجد موقع"); window.open(`https://maps.google.com/?q=${lat},${lng}`,"_blank"); };
+window.logout=()=>{ localStorage.removeItem('naqli_driverId'); location.reload(); };
 
 if(driverId){
-  // محاولة دخول تلقائي
   import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then(async(m)=>{
-    let { getDoc }=m; let d=await getDoc(doc(db,"drivers",driverId));
+    let d=await m.getDoc(m.doc(db,"drivers",driverId));
     if(d.exists() && d.data().status==="approved"){ driverData=d.data(); enterMain(); }
   });
 }
