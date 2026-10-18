@@ -3,143 +3,143 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نقلي - السائق 10%</title>
-<link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#0a3d62">
+<title>نقلي - دخول السائقين</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;font-family:Tajawal,Arial}
 body{background:#eef2f7;margin:0;padding:12px}
-.card{background:#fff;border-radius:14px;padding:16px;margin:10px 0;box-shadow:0 2px 8px rgba(0,0,0,.07)}
-#map{height:320px;width:100%;border-radius:12px;border:2px solid #0a3d62}
-.btn{width:100%;padding:13px;border:0;border-radius:10px;font-weight:bold;cursor:pointer;margin-top:8px;font-size:16px}
-.btn-green{background:#27ae60;color:#fff}.btn-blue{background:#0a3d62;color:#fff}.btn-orange{background:#ff9800;color:#fff}
-.badge{padding:4px 8px;border-radius:6px;color:#fff;font-size:12px}
-input{width:100%;padding:11px;border:1.5px solid #ddd;border-radius:10px;margin:6px 0}
-.label{font-weight:bold;margin-top:6px;display:block}
-#loginBox{position:fixed;inset:0;background:#eef2f7;z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px}
-.profit-box{background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border:2px solid #27ae60;border-radius:12px;padding:12px;text-align:center;margin:10px 0}
+.card{background:#fff;border-radius:14px;padding:18px;margin:12px auto;max-width:420px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+#map{height:320px;border-radius:12px;border:2px solid #0a3d62}
+.btn{width:100%;padding:13px;border:0;border-radius:10px;font-weight:bold;cursor:pointer;margin-top:10px;font-size:16px}
+.btn-blue{background:#0a3d62;color:#fff}.btn-green{background:#27ae60;color:#fff}.btn-gray{background:#eee;color:#333}
+input,select{width:100%;padding:12px;border:1.5px solid #ddd;border-radius:10px;margin:7px 0;font-size:15px}
+.link{text-align:center;margin-top:15px;color:#0a3d62;cursor:pointer;text-decoration:underline;font-weight:bold}
+.hidden{display:none}
+.label{font-weight:bold;font-size:13px;margin-top:8px;display:block}
 </style>
 </head>
 <body>
-<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js')}</script>
 
-<div id="loginBox">
-  <div class="card" style="width:100%;max-width:400px">
-    <h2 style="color:#0a3d62;text-align:center;margin:0">🚕 تسجيل السائق</h2>
-    <label class="label">الاسم</label><input id="dName">
-    <label class="label">الهاتف</label><input id="dPhone">
-    <label class="label">نوع السيارة</label><select id="dVehicle"><option>واوا</option><option>تاكسي</option><option>شاحنة متوسطة 3 طن</option><option>شاحنة كبيرة 10 طن</option></select>
-    <label class="label">رقم اللوحة</label><input id="dPlate">
-    <label class="label">صورة شخصية</label><input type="file" id="dPhoto" accept="image/*">
-    <button class="btn btn-blue" onclick="registerDriver()">✅ تسجيل</button>
-    <p style="font-size:12px;text-align:center;color:#666">ربحك 90% من كل طلب - عمولة التطبيق 10% فقط</p>
-  </div>
+<!-- 1. شاشة الدخول للسائق المعتمد -->
+<div id="loginBox" class="card">
+  <h2 style="text-align:center;color:#0a3d62;margin:0 0 10px 0">🚕 دخول السائق</h2>
+  <p style="text-align:center;color:#666;font-size:13px;margin:0 0 10px 0">للسائقين المعتمدين فقط</p>
+  <label class="label">رقم الهاتف</label>
+  <input id="loginPhone" type="tel" placeholder="222xxxxxxxx">
+  <label class="label">كلمة السر</label>
+  <input id="loginPass" type="password" placeholder="كلمة السر">
+  <button class="btn btn-blue" onclick="loginDriver()">دخول</button>
+  <div class="link" onclick="showRegister()">➕ تسجيل سائق جديد</div>
+  <p style="text-align:center;font-size:11px;color:#888;margin-top:12px">ربحك 90% - عمولة التطبيق 10% فقط</p>
 </div>
 
-<h2 style="text-align:center;color:#0a3d62">🚕 لوحة السائق - 90% ربح</h2>
-
-<div class="card">
-  <div id="map"></div>
-  <p id="gpsStatus" style="text-align:center;color:#e74c3c">⏳ جاري تفعيل GPS...</p>
-  <button class="btn btn-blue" onclick="toggleOnline()" id="onlineBtn">🟢 متصل - أستقبل الطلبات</button>
+<!-- 2. شاشة تسجيل سائق جديد (مخفية في البداية) -->
+<div id="registerBox" class="card hidden">
+  <h2 style="text-align:center;color:#0a3d62">📝 تسجيل سائق جديد</h2>
+  <label class="label">الاسم الكامل</label><input id="dName" placeholder="الاسم">
+  <label class="label">رقم الهاتف</label><input id="dPhone" type="tel" placeholder="222xxxxxxxx">
+  <label class="label">كلمة السر</label><input id="dPass" type="password" placeholder="اختر كلمة سر">
+  <label class="label">نوع المركبة</label>
+  <select id="dVehicle">
+    <option value="تاكسي">تاكسي - 100 MRU</option>
+    <option value="واوا">واوا - 150 MRU</option>
+    <option value="شاحنة متوسطة 3 طن">شاحنة متوسطة 3 طن - 600 MRU</option>
+    <option value="شاحنة كبيرة 10 طن">شاحنة كبيرة 10 طن - 1000 MRU</option>
+  </select>
+  <label class="label">رقم اللوحة</label><input id="dPlate" placeholder="رقم اللوحة">
+  <label class="label">صورة شخصية</label><input type="file" id="dPhoto" accept="image/*">
+  <label class="label">صورة بطاقة التعريف / رخصة السياقة</label><input type="file" id="dIdPhoto" accept="image/*">
+  <button class="btn btn-green" onclick="registerDriver()">✅ إرسال طلب التسجيل</button>
+  <div class="link" onclick="showLogin()">⬅️ الرجوع للدخول</div>
 </div>
 
-<div class="profit-box" id="profitBox" style="display:none">
-  <div>💰 طلب حالي</div>
-  <div style="font-size:22px;font-weight:bold" id="profitText">0 MRU</div>
-  <small id="profitDetail"></small>
+<!-- 3. لوحة السائق بعد الدخول -->
+<div id="mainBox" class="hidden" style="max-width:600px;margin:auto">
+  <h2 style="text-align:center;color:#0a3d62">🚕 مرحبا <span id="driverNameSpan"></span></h2>
+  <div class="card"><div id="map"></div><p id="gpsStatus" style="text-align:center">📍 GPS</p></div>
+  <div id="ordersList"></div>
+  <button class="btn btn-gray" onclick="logout()">خروج</button>
 </div>
-
-<div id="ordersList"></div>
 
 <script type="module">
 import { db } from "./firebase.js";
-import { collection, addDoc, doc, updateDoc, onSnapshot, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, onSnapshot, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-let driverId=localStorage.getItem('naqli_driverId'), driverData=null, isOnline=true, map, myMarker, watchId, currentOrder=null;
+let driverId=localStorage.getItem('naqli_driverId'), driverData=null, map;
 
-function initMap(){
-  map=L.map('map').setView([18.0735,-15.9582],12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-  startGps();
+function initMap(){ 
+  map=L.map('map').setView([18.0735,-15.9582],12); 
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); 
 }
 window.addEventListener('load',initMap);
 
-async function checkLogin(){
-  if(driverId){
-    let snap=await getDocs(query(collection(db,"drivers"), where("__name__","==",driverId)));
-    // بسيط: نحاول جلب
-    try{
-      const { getDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
-      let d=await getDoc(doc(db,"drivers",driverId));
-      if(d.exists()){ driverData=d.data(); loginBox.style.display='none'; loadOrders(); }
-    }catch{}
-  }
-}
-checkLogin();
+window.showRegister=()=>{ loginBox.classList.add('hidden'); registerBox.classList.remove('hidden'); }
+window.showLogin=()=>{ registerBox.classList.add('hidden'); loginBox.classList.remove('hidden'); }
 
+// دخول بالهاتف + كلمة السر
+window.loginDriver=async()=>{
+  let phone=loginPhone.value.trim(), pass=loginPass.value.trim();
+  if(phone.length<8||!pass) return alert("أدخل الهاتف وكلمة السر");
+  let q=query(collection(db,"drivers"), where("phone","==",phone), where("password","==",pass), where("status","==","approved"));
+  let snap=await getDocs(q);
+  if(snap.empty) return alert("رقم أو كلمة سر خاطئة أو لم تتم الموافقة بعد");
+  let d=snap.docs[0]; driverId=d.id; driverData=d.data();
+  localStorage.setItem('naqli_driverId',driverId);
+  enterMain();
+};
+
+// تسجيل جديد
 window.registerDriver=async()=>{
-  let name=dName.value.trim(), phone=dPhone.value.trim(), vehicle=dVehicle.value, plate=dPlate.value.trim();
-  if(name.length<3||phone.length<8||!plate) return alert("أكمل البيانات");
-  let photoBase64="";
-  if(dPhoto.files[0]){
-    photoBase64=await new Promise(r=>{let fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(dPhoto.files[0]);});
-  }
-  let ref=await addDoc(collection(db,"drivers"),{name,phone,vehicle,plate,photoBase64,status:"pending",createdAt:new Date(),lat:18.0735,lng:-15.9582});
-  driverId=ref.id; localStorage.setItem('naqli_driverId',driverId); driverData={name,phone,vehicle,plate,photoBase64}; loginBox.style.display='none'; alert("تم التسجيل، انتظر موافقة الإدارة"); loadOrders();
+  let name=dName.value.trim(), phone=dPhone.value.trim(), pass=dPass.value.trim(), vehicle=dVehicle.value, plate=dPlate.value.trim();
+  if(name.length<3||phone.length<8||!pass||!plate) return alert("أكمل جميع الحقول");
+  let photoBase64="", idPhotoBase64="";
+  if(dPhoto.files[0]) photoBase64=await toBase64(dPhoto.files[0]);
+  if(dIdPhoto.files[0]) idPhotoBase64=await toBase64(dIdPhoto.files[0]);
+  await addDoc(collection(db,"drivers"),{name,phone,password:pass,vehicle,plate,photoBase64,idPhotoBase64,status:"pending",balance:0,rating:5,createdAt:new Date()});
+  alert("تم إرسال طلبك، انتظر موافقة الإدارة وستدخل بنفس الهاتف وكلمة السر");
+  showLogin();
 };
 
-function startGps(){
-  if(!navigator.geolocation) return;
-  watchId=navigator.geolocation.watchPosition(pos=>{
-    let lat=pos.coords.latitude, lng=pos.coords.longitude;
-    gpsStatus.textContent=`✅ GPS نشط: ${lat.toFixed(4)}`;
-    gpsStatus.style.color="green";
-    if(myMarker) map.removeLayer(myMarker);
-    myMarker=L.marker([lat,lng]).addTo(map).bindPopup("موقعك").openPopup();
-    map.setView([lat,lng],14);
-    if(driverId){ updateDoc(doc(db,"drivers",driverId),{lat,lng,lastSeen:new Date()}); if(currentOrder){ updateDoc(doc(db,"requests",currentOrder),{driverLat:lat,driverLng:lng}); } }
-  },err=>{gpsStatus.textContent="❌ فعّل GPS: "+err.message},{enableHighAccuracy:true});
+function toBase64(file){return new Promise(r=>{let fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(file);});}
+
+function enterMain(){
+  loginBox.classList.add('hidden'); registerBox.classList.add('hidden'); mainBox.classList.remove('hidden');
+  driverNameSpan.textContent=driverData.name;
+  setTimeout(()=>map.invalidateSize(),500);
+  loadOrders();
 }
 
-window.toggleOnline=()=>{
-  isOnline=!isOnline; onlineBtn.textContent=isOnline?"🟢 متصل - أستقبل الطلبات":"🔴 غير متصل"; onlineBtn.style.background=isOnline?"#0a3d62":"#e74c3c";
-};
-
-async function loadOrders(){
+function loadOrders(){
   onSnapshot(query(collection(db,"requests"), orderBy("createdAt","desc")), snap=>{
     let h=""; snap.forEach(s=>{
       let o=s.data();
-      if(o.status==='new' && isOnline){
-        let profit=Math.round(o.price*0.90); let comm=Math.round(o.price*0.10);
-        h+=`<div class="card" style="border-right:5px solid #27ae60"><b>📦 ${o.mouqataa} → ${o.destArea}</b><br>${o.name} - ${o.phone}<br>${o.vehicle} - ${o.goodsDesc}<br>
-        <div style="background:#e8f5e9;padding:8px;border-radius:8px;margin:8px 0;text-align:center"><b>💰 ${o.price} MRU</b><br><span style="color:#27ae60">ربحك 90% = ${profit} MRU</span><br><small>عمولة التطبيق 10% = ${comm} MRU</small></div>
-        <button class="btn btn-green" onclick="acceptOrder('${s.id}')">✅ قبول الطلب</button>
-        <button class="btn btn-blue" onclick="openMap(${o.customerLat},${o.customerLng})">🗺️ موقع الزبون</button></div>`;
+      if(o.status==='new'){
+        let profit=Math.round(o.price*0.90); // 10% عمولة
+        let comm=Math.round(o.price*0.10);
+        h+=`<div class="card"><b>📦 ${o.mouqataa} → ${o.destArea}</b><br>${o.name} - ${o.phone}<br>${o.vehicle} - ${o.price} MRU<br>
+        <div style="background:#e8f5e9;padding:8px;border-radius:8px;margin:8px 0;text-align:center">ربحك: <b style="color:#27ae60">${profit} MRU (90%)</b><br><small>عمولة التطبيق: ${comm} MRU</small></div>
+        <button class="btn btn-green" onclick="acceptOrder('${s.id}')">✅ قبول</button></div>`;
       }
-      if(o.driverId===driverId && o.status!=='completed' && o.status!=='deleted'){
-        currentOrder=s.id; let profit=Math.round(o.price*0.90);
-        h+=`<div class="card" style="border:2px solid #0a3d62;background:#f0f7ff"><h3 style="margin:0">🚀 طلبك الحالي</h3><b>${o.mouqataa} → ${o.destArea}</b><br>الزبون: ${o.name} - ${o.phone}<br>السعر: ${o.price} MRU | ربحك: ${profit} MRU<br>
-        <a href="tel:${o.phone}"><button class="btn btn-blue">📞 اتصال بالزبون</button></a>
-        <button class="btn btn-orange" onclick="setOnWay('${s.id}')">🚚 أنا في الطريق</button>
-        <button class="btn btn-green" onclick="completeOrder('${s.id}')">✅ تم التوصيل</button></div>`;
-        document.getElementById('profitBox').style.display='block'; document.getElementById('profitText').textContent=profit+" MRU ربحك"; document.getElementById('profitDetail').textContent=`من أصل ${o.price} MRU - عمولة 10%`;
+      if(o.driverId===driverId && o.status!=='completed'){
+        h+=`<div class="card" style="border:2px solid #0a3d62"><b>طلبك الحالي: ${o.mouqataa}</b><br>${o.name} ${o.phone}<br><a href="tel:${o.phone}"><button class="btn btn-blue">📞 اتصال</button></a><button class="btn btn-green" onclick="completeOrder('${s.id}')">تم التوصيل</button></div>`;
       }
     });
-    document.getElementById('ordersList').innerHTML=h||"<div class='card' style='text-align:center;color:#888'>لا يوجد طلبات حاليا - انتظر...</div>";
+    document.getElementById('ordersList').innerHTML=h||"<div class='card' style='text-align:center;color:#888'>لا يوجد طلبات</div>";
   });
 }
 
-window.acceptOrder=async(id)=>{
-  if(!driverId) return alert("سجل أولا");
-  await updateDoc(doc(db,"requests",id),{status:"accepted",driverId:driverId,driverName:driverData?.name,driverPhone:driverData?.phone,driverVehicle:driverData?.vehicle,driverPlate:driverData?.plate,driverPhoto:driverData?.photoBase64,acceptedAt:new Date()});
-  currentOrder=id; alert("تم قبول الطلب - تواصل مع الزبون");
-};
-window.setOnWay=async(id)=>{ await updateDoc(doc(db,"requests",id),{status:"on_the_way"}); };
-window.completeOrder=async(id)=>{ await updateDoc(doc(db,"requests",id),{status:"completed",completedAt:new Date()}); currentOrder=null; document.getElementById('profitBox').style.display='none'; alert("أحسنت! تم إكمال الطلب"); };
-window.openMap=(lat,lng)=>{ if(!lat) return alert("لا يوجد موقع"); window.open(`https://maps.google.com/?q=${lat},${lng}`,"_blank"); };
+window.acceptOrder=async(id)=>{ await updateDoc(doc(db,"requests",id),{status:"accepted",driverId:driverId,driverName:driverData.name}); alert("تم القبول"); }
+window.completeOrder=async(id)=>{ await updateDoc(doc(db,"requests",id),{status:"completed"}); alert("أحسنت!"); }
+window.logout=()=>{ localStorage.removeItem('naqli_driverId'); location.reload(); }
+
+if(driverId){
+  // محاولة دخول تلقائي
+  import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then(async(m)=>{
+    let { getDoc }=m; let d=await getDoc(doc(db,"drivers",driverId));
+    if(d.exists() && d.data().status==="approved"){ driverData=d.data(); enterMain(); }
+  });
+}
 </script>
 </body>
 </html>
