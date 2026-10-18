@@ -2,239 +2,85 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>نقلي - لوحة تحكم احترافية</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نقلي - الإدارة 10%</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-:root{--main:#0a3d62;--green:#27ae60;--red:#e74c3c;--bg:#f0f4f8}
-*{box-sizing:border-box;font-family:Tajawal,system-ui}body{margin:0;background:var(--bg)}
-.header{background:var(--main);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;padding:12px}
-.stat{background:#fff;border-radius:12px;padding:14px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.06)}
-.card{background:#fff;border-radius:12px;padding:14px;margin:12px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
-.btn{padding:8px 14px;border:0;border-radius:8px;cursor:pointer;font-weight:bold;margin:2px}
-.approve{background:var(--green);color:#fff}.reject{background:var(--red);color:#fff}.blue{background:var(--main);color:#fff}
-.btn-call{background:#27ae60;color:#fff}.btn-wa{background:#25D366;color:#fff}.btn-msg{background:#2980b9;color:#fff}
-input{width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;margin:6px 0}
-#map{height:500px;border-radius:12px}
-.badge{padding:4px 8px;border-radius:20px;font-size:12px;color:#fff}
-.thumb{width:70px;height:70px;object-fit:cover;border-radius:8px;border:2px solid #ddd;cursor:pointer}
-#imgModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;flex-direction:column}
-#imgModal img{max-width:95%;max-height:85%;border-radius:12px;border:3px solid #fff}
-.driver-box{border:2px solid var(--green);background:#f0fff4}
+*{box-sizing:border-box;font-family:Tajawal,Arial}
+body{background:#f0f2f5;margin:0;padding:12px}
+.header{background:#0a1931;color:#fff;padding:18px;text-align:center;border-radius:0 0 18px 18px;margin:-12px -12px 15px -12px}
+.card{background:#fff;border-radius:14px;padding:16px;margin:10px 0;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.stat-card{background:#fff;border-radius:12px;padding:14px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.stat-num{font-size:22px;font-weight:bold;color:#27ae60}
+.btn{padding:10px 14px;border:0;border-radius:8px;font-weight:bold;cursor:pointer;margin:4px}
+.btn-green{background:#27ae60;color:#fff}.btn-red{background:#e74c3c;color:#fff}.btn-blue{background:#1a73e8;color:#fff}
+#adminMap{height:400px;border-radius:12px;border:2px solid #0a1931}
+.badge{padding:3px 8px;border-radius:6px;font-size:12px;color:#fff}
+.b-new{background:#3498db}.b-accepted{background:#f39c12}.b-way{background:#9b59b6}.b-done{background:#27ae60}
+.tabs{display:flex;gap:8px;margin:10px 0}
+.tab{flex:1;padding:12px;background:#eee;border:0;border-radius:10px;font-weight:bold;cursor:pointer}
+.tab.active{background:#0a1931;color:#fff}
 </style>
 </head>
 <body>
-<div id="loginBox" class="card" style="max-width:380px;margin:90px auto;text-align:center">
-<h2>👑 دخول الإدارة</h2>
-<input id="email" type="email" placeholder="naglylilbidaa@gmail.com" value="naglylilbidaa@gmail.com">
-<input id="pass" type="password" placeholder="كلمة السر - مطلوبة كل مرة">
-<button class="btn approve" style="width:100%" onclick="login()">دخول آمن</button>
-<p id="err" style="color:red"></p>
-</div>
-
-<div id="panel" style="display:none">
-<div class="header"><b>🚚 نقلي - لوحة التحكم</b><div><span id="adminEmail"></span> <button class="btn" style="background:#fff;color:var(--main)" onclick="logout()">خروج</button></div></div>
+<div class="header"><h2 style="margin:0">👑 إدارة نقلي - عمولة 10%</h2></div>
 
 <div class="stats">
-<div class="stat"><h2 id="sPending">0</h2><small>معلقون</small></div>
-<div class="stat"><h2 id="sApproved">0</h2><small>معتمدون</small></div>
-<div class="stat"><h2 id="sReq">0</h2><small>طلبات</small></div>
+<div class="stat-card"><div>طلبات اليوم</div><div class="stat-num" id="todayOrders">0</div></div>
+<div class="stat-card"><div>أرباحك اليوم (10%)</div><div class="stat-num" id="todayProfit">0 MRU</div></div>
+<div class="stat-card"><div>مكتملة</div><div class="stat-num" id="doneOrders">0</div></div>
 </div>
 
-<div class="card"><input id="search" placeholder="🔍 ابحث بالاسم أو الهاتف..." oninput="filter()"></div>
-<div class="card" style="border-right:5px solid orange"><h3>⏳ معلقون</h3><div id="pending"></div></div>
-<div class="card" style="border-right:5px solid var(--green)"><h3>✅ معتمدون</h3><div id="approved"></div></div>
-<div class="card"><h3>📦 الطلبات - معلومات كاملة + تتبع</h3><div id="reqs"></div></div>
-<div class="card"><h3>🗺️ الخريطة الحية - تتبع الرحلة حتى النهاية</h3><div id="map"></div><p id="trackInfo" style="font-size:13px;color:#555"></p></div>
+<div class="tabs">
+<button class="tab active" onclick="showTab('orders',this)">📦 الطلبات</button>
+<button class="tab" onclick="showTab('drivers',this)">🚕 السائقين</button>
+<button class="tab" onclick="showTab('map',this)">🗺️ الخريطة</button>
 </div>
 
-<div id="imgModal" onclick="this.style.display='none'"><img id="modalImg"><b id="modalTxt" style="color:#fff;margin-top:8px"></b></div>
+<div id="ordersTab"></div>
+<div id="driversTab" style="display:none"></div>
+<div id="mapTab" style="display:none"><div class="card"><div id="adminMap"></div></div></div>
 
 <script type="module">
 import { db } from "./firebase.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { collection, getDocs, query, where, updateDoc, doc, deleteDoc, addDoc, serverTimestamp, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-const ALLOWED_ADMINS = ["naglylilbidaa@gmail.com"];
-const auth = getAuth();
-let map, driverMarker, customerMarker, activeTrackUnsub = null;
-
-// --- 1. كلمة السر كل مرة: اجبار الجلسة المؤقتة + تسجيل خروج عند البدء ---
-setPersistence(auth, browserSessionPersistence);
-signOut(auth); // يطلب كلمة السر كل مرة تفتح الصفحة
-
-onAuthStateChanged(auth, user=>{
- if(user && ALLOWED_ADMINS.includes(user.email)){
-   document.getElementById('panel').style.display='block';
-   document.getElementById('loginBox').style.display='none';
-   document.getElementById('adminEmail').innerText=user.email;
-   init(); resetTimer();
- } else if(user){
-   alert("هذا الحساب ليس مسؤولا"); signOut(auth);
- } else {
-   document.getElementById('panel').style.display='none';
-   document.getElementById('loginBox').style.display='block';
- }
-});
-
-window.login = async()=>{
- try{ 
-   await setPersistence(auth, browserSessionPersistence);
-   await signInWithEmailAndPassword(auth, email.value.trim(), pass.value); 
- }
- catch(e){ err.innerText="خطأ: "+e.code; }
-};
-window.logout = ()=> signOut(auth).then(()=>location.reload());
-
-function init(){
- map=L.map('map').setView([18.0735,-15.9582],11);
- L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
- onSnapshot(collection(db,"drivers"), ()=>loadAll());
- onSnapshot(collection(db,"requests"), ()=>loadAll());
- loadAll();
+import { collection, doc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+let adminMap, markers=[];
+window.showTab=(t,el)=>{
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('ordersTab').style.display=t==='orders'?'block':'none';
+  document.getElementById('driversTab').style.display=t==='drivers'?'block':'none';
+  document.getElementById('mapTab').style.display=t==='map'?'block':'none';
+  if(el) el.classList.add('active');
+  if(t==='map') setTimeout(()=>{adminMap.invalidateSize();},300);
 }
-
-async function loadAll(){
- let pSnap=await getDocs(query(collection(db,"drivers"),where("status","==","pending")));
- let aSnap=await getDocs(query(collection(db,"drivers"),where("status","==","approved")));
- let rSnap=await getDocs(collection(db,"requests"));
- sPending.innerText=pSnap.size; sApproved.innerText=aSnap.size; sReq.innerText=rSnap.size;
- 
- let h=""; 
- pSnap.forEach(d=>{
-  let o=d.data();
-  h+=`<div class="card driver-item"><b>${o.name}</b> - ${o.phone} - ${o.vehicle} - لوحة: ${o.plate||''} <span class="badge" style="background:orange">معلق</span>
-  <div style="display:flex;gap:8px;margin:8px 0">
-   <img class="thumb" src="${o.photoBase64||''}" onclick="openImg('${o.photoBase64}','صورة السائق - ${o.name}')">
-   <img class="thumb" src="${o.idPhotoBase64||''}" onclick="openImg('${o.idPhotoBase64}','بطاقة التعريف - ${o.name}')">
-  </div>
-  <button class="btn approve" onclick="approve('${d.id}','${o.name}')">اعتماد</button> <button class="btn reject" onclick="reject('${d.id}','${o.name}')">رفض</button></div>`;
- });
- pending.innerHTML=h||"لا يوجد";
- 
- let h2=""; 
- aSnap.forEach(d=>{
-  let o=d.data();
-  h2+=`<div class="card driver-item">✅ <b>${o.name}</b> - ${o.phone} - ${o.vehicle}
-  <div style="display:flex;gap:8px;margin:8px 0">
-   <img class="thumb" src="${o.photoBase64||''}" onclick="openImg('${o.photoBase64}','صورة السائق - ${o.name}')">
-   <img class="thumb" src="${o.idPhotoBase64||''}" onclick="openImg('${o.idPhotoBase64}','بطاقة التعريف - ${o.name}')">
-  </div>
-  <button class="btn reject" style="background:#e67e22" onclick="cancelApprove('${d.id}','${o.name}')">⚠️ إلغاء الاعتماد</button></div>`;
- });
- approved.innerHTML=h2;
-
- // --- 2. الطلبات بمعلومات كاملة ---
- let h3="";
- for (let d of rSnap.docs){
-   let o=d.data();
-   let id=d.id;
-   let driverDetails = "";
-   if(o.driverId || o.acceptedBy){
-     let driverId = o.driverId || o.acceptedBy;
-     try{
-       let drSnap = await getDoc(doc(db,"drivers",driverId));
-       if(drSnap.exists()){
-         let dr = drSnap.data();
-         driverDetails = `
-           <div class="card driver-box">
-             <h4>🚕 معلومات السائق الذي وافق:</h4>
-             <div style="display:flex;gap:10px;align-items:center">
-               <img src="${dr.photoBase64||''}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid #27ae60">
-               <div>
-                 <p style="margin:2px"><b>الاسم:</b> ${dr.name}</p>
-                 <p style="margin:2px"><b>الهاتف:</b> ${dr.phone}</p>
-                 <p style="margin:2px"><b>نوع السيارة:</b> ${dr.vehicle||dr.carType||''}</p>
-                 <p style="margin:2px"><b>اللوحة:</b> ${dr.plate||dr.carPlate||''}</p>
-               </div>
-             </div>
-             <div style="margin-top:8px">
-               <a href="tel:${dr.phone}"><button class="btn btn-call">📞 اتصال بالسائق</button></a>
-               <a href="https://wa.me/${dr.phone}" target="_blank"><button class="btn btn-wa">💬 واتساب سائق</button></a>
-               <button class="btn btn-msg" onclick="sendMsg('${id}','${dr.phone}','driver')">✉️ رسالة للسائق</button>
-               <button class="btn blue" onclick="trackOrder('${id}')">🗺️ تتبع الرحلة</button>
-             </div>
-           </div>
-         `;
-       }
-     }catch(e){}
-   }
-
-   h3+=`<div class="card driver-item" style="border-right:5px solid ${o.status=='completed'?'green': o.driverId?'#2980b9':'#ccc'}">
-     <b>طلب #${id.slice(0,6)}</b> - <span class="badge" style="background:${o.status=='completed'?'green':'#0a3d62'}">${o.status||'جديد'}</span><br>
-     <b>الزبون:</b> ${o.name||o.customerName||''} - ${o.phone||o.customerPhone||''}<br>
-     <b>المسار:</b> ${o.mouqataa||o.from||''} → ${o.destArea||o.to||''}<br>
-     <b>التفاصيل:</b> ${o.details||''}<br>
-     <b>السعر:</b> ${o.price||'غير محدد'}<br>
-     <div style="margin-top:8px">
-       <a href="tel:${o.phone||o.customerPhone}"><button class="btn btn-call">📞 اتصال بالزبون</button></a>
-       <a href="https://wa.me/${o.phone||o.customerPhone}" target="_blank"><button class="btn btn-wa">💬 واتساب زبون</button></a>
-       <button class="btn btn-msg" onclick="sendMsg('${id}','${o.phone||o.customerPhone}','customer')">✉️ رسالة للزبون</button>
-     </div>
-     ${driverDetails}
-   </div>`;
- }
- reqs.innerHTML=h3||"لا يوجد طلبات";
-}
-
-window.approve=async(id,name)=>{
- await updateDoc(doc(db,"drivers",id),{status:"approved", approvedAt:serverTimestamp(), approvedBy:auth.currentUser.email});
- await addDoc(collection(db,"logs"),{action:"approve", driverId:id, driverName:name, by:auth.currentUser.email, at:serverTimestamp()});
-};
-window.reject=async(id,name)=>{
- if(!confirm("تأكيد الرفض؟")) return;
- await deleteDoc(doc(db,"drivers",id));
- await addDoc(collection(db,"logs"),{action:"reject", driverId:id, driverName:name, by:auth.currentUser.email, at:serverTimestamp()});
-};
-window.cancelApprove=async(id,name)=>{
- if(!confirm("هل تريد إلغاء اعتماد "+name+" ؟")) return;
- await updateDoc(doc(db,"drivers",id),{status:"pending"});
-};
-
-window.openImg=(src,txt)=>{
- if(!src) return;
- modalImg.src=src;
- modalTxt.innerText=txt;
- imgModal.style.display='flex';
-};
-
-window.sendMsg=async(orderId, phone, type)=>{
-  let txt = prompt(`رسالتك إلى ${type==='driver'?'السائق':'الزبون'} (${phone}):`);
-  if(!txt) return;
-  await addDoc(collection(db,"adminMessages"),{orderId, phone, type, text:txt, by:auth.currentUser.email, at:serverTimestamp()});
-  await addDoc(collection(db,"requests",orderId,"messages"),{text:txt, from:'admin', to:type, at:serverTimestamp()});
-  alert("تم إرسال الرسالة ✅");
-};
-
-window.trackOrder=async(orderId)=>{
-  if(activeTrackUnsub) activeTrackUnsub();
-  trackInfo.innerText = "جاري تتبع الطلب "+orderId+" ...";
-  let unsub = onSnapshot(doc(db,"requests",orderId), (snap)=>{
-    if(!snap.exists()) return;
-    let o = snap.data();
-    if(o.driverLat && o.driverLng){
-      if(driverMarker) map.removeLayer(driverMarker);
-      driverMarker = L.marker([o.driverLat, o.driverLng]).addTo(map).bindPopup("السائق - "+orderId).openPopup();
-      map.setView([o.driverLat, o.driverLng], 15);
-      trackInfo.innerText = `آخر تحديث: ${new Date().toLocaleTimeString()} - الحالة: ${o.status} - السائق: ${o.driverLat}, ${o.driverLng}`;
-      if(o.status === 'completed'){
-        trackInfo.innerText += " - ✅ انتهت الرحلة";
-        unsub();
-      }
-    }
-    if(o.customerLat && o.customerLng){
-      if(customerMarker) map.removeLayer(customerMarker);
-      customerMarker = L.marker([o.customerLat, o.customerLng], {icon: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/149/149071.png', iconSize:[32,32]})}).addTo(map);
-    }
+function initAdminMap(){ adminMap=L.map('adminMap').setView([18.0735,-15.9582],12); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMap); }
+async function loadOrders(){
+  onSnapshot(query(collection(db,"requests"), orderBy("createdAt","desc")), snap=>{
+    let h="", today=0, profit=0, done=0; let todayStr=new Date().toDateString();
+    snap.forEach(s=>{
+      let o=s.data(); let d=o.createdAt?.toDate ? o.createdAt.toDate() : new Date(o.createdAt);
+      let commission=(o.price*0.10).toFixed(1); let driverProfit=(o.price*0.90).toFixed(1);
+      if(d.toDateString()===todayStr){ today++; profit+=parseFloat(commission); }
+      if(o.status==='completed') done++;
+      let badge=o.status==='new'?'b-new':o.status==='accepted'?'b-accepted':o.status==='on_the_way'?'b-way':'b-done';
+      h+=`<div class="card"><div style="display:flex;justify-content:space-between"><b>${o.mouqataa} → ${o.destArea}</b><span class="badge ${badge}">${o.status}</span></div><small>${o.name} - ${o.vehicle} - ${o.price} MRU</small><br>💰 عمولتك (10%): <b style="color:#27ae60">${commission} MRU</b> | للسائق: ${driverProfit} MRU<br><small>${d.toLocaleString('ar-MR')}</small></div>`;
+    });
+    document.getElementById('ordersTab').innerHTML=h||"<div class='card'>لا يوجد طلبات</div>";
+    document.getElementById('todayOrders').textContent=today;
+    document.getElementById('todayProfit').textContent=profit.toFixed(1)+" MRU";
+    document.getElementById('doneOrders').textContent=done;
   });
-  activeTrackUnsub = unsub;
-};
-
-let timer; function resetTimer(){ clearTimeout(timer); timer=setTimeout(()=>{alert("انتهت الجلسة - سيطلب كلمة السر مرة أخرى"); logout();}, 10*60*1000); }
-['click','mousemove','keypress'].forEach(e=>document.addEventListener(e,resetTimer));
-window.filter=()=>{let q=search.value.toLowerCase(); document.querySelectorAll('.driver-item').forEach(el=>{el.style.display=el.innerText.toLowerCase().includes(q)?'block':'none'})};
+}
+async function loadDrivers(){
+  onSnapshot(collection(db,"drivers"), snap=>{
+    let h=""; snap.forEach(d=>{let o=d.data(); h+=`<div class="card" style="display:flex;gap:10px"><img src="${o.photoBase64||''}" style="width:60px;height:60px;border-radius:50%;object-fit:cover"><div style="flex:1"><b>${o.name}</b> - ${o.vehicle}<br>${o.phone}<br><span class="badge ${o.status==='approved'?'b-done':'b-new'}">${o.status}</span></div><div>${o.status!=='approved'?`<button class="btn btn-green" onclick="approve('${d.id}')">✅ موافقة</button>`:''}</div></div>`;});
+    document.getElementById('driversTab').innerHTML=h;
+  });
+}
+window.approve=async(id)=>{ await updateDoc(doc(db,"drivers",id),{status:"approved"}); }
+window.addEventListener('load',()=>{ initAdminMap(); loadOrders(); loadDrivers(); });
 </script>
 </body>
 </html>
