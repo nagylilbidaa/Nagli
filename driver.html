@@ -10,11 +10,13 @@
 <style>
 *{box-sizing:border-box;font-family:Tajawal,Arial}
 body{background:#f0f2f5;margin:0;padding:12px}
-.header{background:#0a1931;color:#fff;padding:18px;text-align:center;border-radius:0 0 18px 18px;margin:-12px -12px 15px -12px}
+.header{background:#0a1931;color:#fff;padding:18px;text-align:center;border-radius:0 0 18px 18px;margin:-12px -12px 15px -12px;position:sticky;top:0;z-index:20}
 .card{background:#fff;border-radius:16px;padding:18px;margin:12px 0;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.new-order-anim{animation:pulse 1.2s infinite;border:2px solid #e74c3c}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(231,76,60,.7)}70%{box-shadow:0 0 0 12px rgba(231,76,60,0)}100%{box-shadow:0 0 0 0 rgba(231,76,60,0)}}
 input,select{width:100%;padding:13px;border:1.5px solid #e5e7eb;border-radius:11px;margin:7px 0;font-size:15px}
 .btn{width:100%;padding:14px;background:#0a1931;color:#fff;border:0;border-radius:12px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:10px}
-.btn-green{background:#27ae60}.btn-blue{background:#1a73e8}.btn-whats{background:#25D366}
+.btn-green{background:#27ae60}.btn-blue{background:#1a73e8}.btn-whats{background:#25D366}.btn-orange{background:#ff9800}
 .file-label{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1.5px dashed #0a3d62;padding:12px;border-radius:10px;margin:7px 0;cursor:pointer}
 .file-label.ok{border-color:#27ae60;background:#e8f5e9}
 .link{text-align:center;color:#666;margin-top:12px;cursor:pointer;text-decoration:underline}
@@ -25,11 +27,13 @@ input,select{width:100%;padding:13px;border:1.5px solid #e5e7eb;border-radius:11
 .acceptedBox{background:#fff;border:2px solid #27ae60;border-radius:16px;padding:18px;margin:12px 0}
 .phoneNum{font-size:28px;font-weight:bold;color:#0a1931;direction:ltr;text-align:center;margin:12px 0;letter-spacing:1px}
 .greenTop{background:#27ae60;color:#fff;padding:16px;border-radius:12px;text-align:center;font-size:18px;font-weight:bold;margin-bottom:12px}
-#driverMap{height:350px;border-radius:12px;margin-top:12px;display:none}
 </style>
 </head>
 <body>
-<div class="header"><h2 style="margin:0">🚛 نقلي - السائق</h2></div>
+<div class="header">
+<h2 style="margin:0">🚛 نقلي - السائق <span id="notifCount" style="background:#e74c3c;padding:3px 9px;border-radius:12px;font-size:13px;display:none">0</span></h2>
+<button id="soundBtn" onclick="enableSound()" style="background:#fff;color:#0a1931;border:0;padding:7px 14px;border-radius:8px;margin-top:8px;font-weight:bold">🔔 فعل تنبيه الطلبات</button>
+</div>
 
 <div class="card" id="loginCard">
 <h3 style="margin-top:0">🔑 دخول السائق المعتمد</h3>
@@ -59,18 +63,19 @@ input,select{width:100%;padding:13px;border:1.5px solid #e5e7eb;border-radius:11
 
 <div id="driverInfo"></div>
 <div id="acceptedOrder"></div>
-<div id="driverMap"></div>
+<div id="driverMap" style="height:350px;border-radius:12px;display:none;margin:12px 0"></div>
 <div id="orders"></div>
 <div id="imgModal" onclick="this.style.display='none'"><img id="modalImg"></div>
 
+<audio id="orderSound" src="https://cdn.pixabay.com/download/audio/2022/03/24/audio_2a6e1f5b7c.mp3" preload="auto" loop></audio>
+
 <script type="module">
 import { db } from "./firebase.js";
-import { collection, addDoc, getDocs, getDoc, query, where, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, addDoc, getDocs, getDoc, query, where, updateDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let url1="", url2="";
 label1.onclick=()=>dPhoto.click(); label2.onclick=()=>dIdPhoto.click();
 function compress(file){ return new Promise(res=>{ let r=new FileReader(); r.onload=e=>{ let img=new Image(); img.onload=()=>{ let c=document.createElement('canvas'); let w=img.width,h=img.height; if(w>600){h=h*600/w;w=600;} c.width=w;c.height=h; c.getContext('2d').drawImage(img,0,0,w,h); res(c.toDataURL('image/jpeg',0.5)); }; img.src=e.target.result; }; r.readAsDataURL(file); }); }
-
 dPhoto.onchange=e=>{ let f=e.target.files[0]; if(!f) return; url1=URL.createObjectURL(f); label1.classList.add('ok'); t1.innerHTML=`✅ تم <span class="eye" onclick="event.stopPropagation(); show1()">👁️</span>`; };
 dIdPhoto.onchange=e=>{ let f=e.target.files[0]; if(!f) return; url2=URL.createObjectURL(f); label2.classList.add('ok'); t2.innerHTML=`✅ تم <span class="eye" onclick="event.stopPropagation(); show2()">👁️</span>`; };
 window.show1=()=>{ modalImg.src=url1; imgModal.style.display='flex'; }
@@ -78,9 +83,20 @@ window.show2=()=>{ modalImg.src=url2; imgModal.style.display='flex'; }
 window.showRegister=()=>{ document.getElementById('regForm').style.display='block'; document.getElementById('loginCard').style.display='none'; }
 window.showLogin=()=>{ document.getElementById('regForm').style.display='none'; document.getElementById('loginCard').style.display='block'; }
 
-let curDriver=null;
-let map, driverMarker, customerMarker, trackingInterval = null;
+let curDriver=null, unsub=null, map, driverMarker, trackingInterval=null, lastOrderCount=0;
+let soundEnabled=false;
 
+window.enableSound=()=>{
+  soundEnabled=true;
+  let a=document.getElementById('orderSound');
+  a.play().then(()=>a.pause());
+  document.getElementById('soundBtn').textContent="✅ التنبيه مفعل - سيرن عند كل طلب";
+  document.getElementById('soundBtn').style.background="#27ae60";
+  document.getElementById('soundBtn').style.color="#fff";
+  if(Notification && Notification.permission!=="granted") Notification.requestPermission();
+}
+
+let curDriverData = null;
 regBtn.onclick=async()=>{
 let name=dName.value.trim(), phone=dPhone.value.trim(), pass=dPass.value.trim(), vehicle=dVehicle.value, plate=dPlate.value.trim();
 if(!name||!phone||!pass||!plate||!dPhoto.files[0]||!dIdPhoto.files[0]) return alert("⚠️ أكمل جميع البيانات والصور");
@@ -101,119 +117,82 @@ if(snap.empty) return alert("رقم أو كلمة السر خاطئة");
 let d=snap.docs[0]; let o=d.data();
 if(o.status!="approved") return alert("⏳ لم تتم الموافقة بعد من الأدمن");
 curDriver={id:d.id,...o};
-driverInfo.innerHTML=`<div class="card" style="border:2px solid #27ae60"><b>مرحبا ${o.name}</b> - ${o.vehicle} ✅</div>`;
+driverInfo.innerHTML=`<div class="card" style="border:2px solid #27ae60"><b>مرحبا ${o.name}</b> - ${o.vehicle} ✅<br><small>في انتظار الطلبات - فعل التنبيه فوق</small></div>`;
 loginCard.style.display='none'; regForm.style.display='none';
-loadOrders();
+listenOrders();
 };
 
-async function loadOrders(){
+function listenOrders(){
 let q=query(collection(db,"requests"),where("vehicle","==",curDriver.vehicle),where("status","==","new"));
-let snap=await getDocs(q); let h="";
-snap.forEach(s=>{ let o=s.data(); h+=`<div class="card"><b>${o.mouqataa} → ${o.destArea}</b><br>${o.goodsDesc||''}<br>💰 ${o.price} MRU<br><button class="btn btn-green" onclick="acceptOrder('${s.id}')">قبول الطلب</button></div>`; });
-orders.innerHTML=h||"لا يوجد طلبات جديدة";
+if(unsub) unsub();
+unsub=onSnapshot(q, snap=>{
+let h="";
+if(snap.size>lastOrderCount && lastOrderCount!==0 && soundEnabled){
+  document.getElementById('orderSound').play();
+  if(Notification.permission==="granted"){
+    new Notification("🚚 طلب جديد!", {body:`${snap.docs[0]?.data().mouqataa} → ${snap.docs[0]?.data().destArea} - ${snap.docs[0]?.data().price} MRU`});
+  }
+  if(navigator.vibrate) navigator.vibrate([400,100,400]);
 }
-
-function initDriverMap(cLat, cLng, dLat, dLng){
-  document.getElementById('driverMap').style.display='block';
-  if(!map){
-    map = L.map('driverMap').setView([dLat||cLat||18.0735, dLng||cLng||-15.9582], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-  }
-  if(customerMarker) map.removeLayer(customerMarker);
-  if(cLat && cLng){
-    customerMarker = L.marker([cLat, cLng], {icon: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/149/149071.png', iconSize:[36,36]})}).addTo(map).bindPopup("الزبون");
-  }
-  if(dLat && dLng){
-    if(driverMarker) map.removeLayer(driverMarker);
-    driverMarker = L.marker([dLat, dLng]).addTo(map).bindPopup("أنت");
-    map.setView([dLat, dLng], 14);
-  }
+lastOrderCount=snap.size;
+document.getElementById('notifCount').style.display=snap.size>0?'inline':'none';
+document.getElementById('notifCount').textContent=snap.size;
+snap.forEach(s=>{
+  let o=s.data();
+  let profit=Math.round(o.price*0.85);
+  h+=`<div class="card new-order-anim"><b>${o.mouqataa} → ${o.destArea}</b><br>${o.goodsDesc||''}<br>💰 الكلي: ${o.price} MRU | <b style="color:#27ae60">ربحك: ${profit} MRU</b><br><small>الزبون: ${o.name} - ${o.phone}</small><br><button class="btn btn-green" onclick="acceptOrder('${s.id}')">✅ قبول الطلب</button></div>`;
+});
+orders.innerHTML=h||"<div class='card' style='text-align:center;color:#888'>لا يوجد طلبات جديدة - ننتظر...</div>";
+});
 }
 
 window.acceptOrder=async(id)=>{
+document.getElementById('orderSound').pause();
 let ref=doc(db,"requests",id); let snap=await getDoc(ref); let o=snap.data();
-let customerPhone=o.customerPhone||o.phone||o.clientPhone||"";
-let customerName=o.customerName||o.clientName||"الزبون";
-let custLat = o.customerLat || o.lat || o.pickupLat;
-let custLng = o.customerLng || o.lng || o.pickupLng;
-
-// 1. قبول الطلب في Firebase
-await updateDoc(ref,{
-  status:"accepted",
-  driverId: curDriver.id,
-  driverName:curDriver.name,
-  driverPhone:curDriver.phone,
-  driverVehicle:curDriver.vehicle,
-  driverPlate:curDriver.plate,
-  progress:50,
-  acceptedAt: new Date()
-});
-
-
+let customerPhone=o.phone||o.customerPhone||"";
+let customerName=o.name||"الزبون";
+await updateDoc(ref,{status:"accepted",driverId:curDriver.id,driverName:curDriver.name,driverPhone:curDriver.phone,driverVehicle:curDriver.vehicle,driverPlate:curDriver.plate,progress:50,acceptedAt:new Date()});
 acceptedOrder.innerHTML=`
-<div class="greenTop">✅ تم قبول الطلب - يتم تتبعك الآن من طرف الإدارة</div>
+<div class="greenTop">✅ تم قبول الطلب - يتم تتبعك الآن</div>
 <div class="acceptedBox">
 <div style="color:#666;font-size:14px">رقم العميل</div>
 <div class="phoneNum">${customerPhone}</div>
 <p><b>العميل:</b> ${customerName}</p>
 <p><b>المسار:</b> ${o.mouqataa} → ${o.destArea}</p>
-<p style="color:green;font-size:13px">📍 موقعك يرسل للأدمن كل 5 ثواني حتى نهاية الرحلة</p>
+<p style="color:green;font-size:13px">📍 موقعك يرسل للزبون كل 5 ثواني</p>
 <button class="btn btn-blue" onclick="window.location.href='tel:${customerPhone}'">📞 اتصال</button>
 <button class="btn btn-whats" onclick="window.open('https://wa.me/${customerPhone.replace(/[^0-9]/g,'')}','_blank')">💬 واتساب</button>
-<button class="btn" style="background:#ff9800;color:#fff" onclick="openGoogleMaps(${custLat},${custLng})">🗺️ فتح في خرائط جوجل</button>
-<button class="btn btn-green" onclick="finishTrip('${id}')">✅ إنهاء الرحلة</button>
-<button class="btn" style="background:#eee;color:#333;margin-top:12px" onclick="cancelTracking();acceptedOrder.innerHTML='';document.getElementById('driverMap').style.display='none';loadOrders()">رجوع للطلبات</button>
+<button class="btn btn-orange" onclick="updateProgress('${id}','on_the_way')">🚚 أنا في الطريق</button>
+<button class="btn btn-green" onclick="updateProgress('${id}','completed')">✅ تم التوصيل - إنهاء</button>
 </div>`;
 orders.innerHTML="";
+startTracking(id, o.customerLat||o.lat, o.customerLng||o.lng);
+};
 
-// 3. بدء التتبع الحي للسائق
-startTracking(id, custLat, custLng);
+window.updateProgress=async(id, st)=>{
+if(st==='completed' && !confirm("هل انتهت الرحلة فعلا؟")) return;
+await updateDoc(doc(db,"requests",id),{status:st,progress: st==='on_the_way'?75:100, ...(st==='completed'?{completedAt:new Date()}:{})});
+if(st==='completed'){
+if(trackingInterval) clearInterval(trackingInterval);
+acceptedOrder.innerHTML=""; document.getElementById('driverMap').style.display='none';
+alert("ممتاز! تمت الرحلة");
+listenOrders();
+}
 };
 
 function startTracking(orderId, custLat, custLng){
-  if(trackingInterval) clearInterval(trackingInterval);
-  
-  // أول موقع فورا
-  navigator.geolocation.getCurrentPosition(async pos=>{
-    let dLat = pos.coords.latitude;
-    let dLng = pos.coords.longitude;
-    await updateDoc(doc(db,"requests",orderId),{ driverLat: dLat, driverLng: dLng });
-    initDriverMap(custLat, custLng, dLat, dLng);
-  });
-
-  // ثم كل 5 ثواني
-  trackingInterval = setInterval(()=>{
-    navigator.geolocation.getCurrentPosition(async pos=>{
-      let dLat = pos.coords.latitude;
-      let dLng = pos.coords.longitude;
-      await updateDoc(doc(db,"requests",orderId),{ driverLat: dLat, driverLng: dLng, lastUpdate: new Date() });
-      initDriverMap(custLat, custLng, dLat, dLng);
-    }, err=>{ console.log("خطأ GPS", err); });
-  }, 5000);
+document.getElementById('driverMap').style.display='block';
+if(!map){ map=L.map('driverMap').setView([18.0735,-15.9582],13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); }
+if(trackingInterval) clearInterval(trackingInterval);
+trackingInterval=setInterval(()=>{
+navigator.geolocation.getCurrentPosition(async pos=>{
+await updateDoc(doc(db,"requests",orderId),{driverLat:pos.coords.latitude,driverLng:pos.coords.longitude,lastUpdate:new Date()});
+if(driverMarker) map.removeLayer(driverMarker);
+driverMarker=L.marker([pos.coords.latitude,pos.coords.longitude]).addTo(map).bindPopup("أنت");
+map.setView([pos.coords.latitude,pos.coords.longitude],15);
+});
+},5000);
 }
-
-window.finishTrip = async(orderId)=>{
-  if(!confirm("هل انتهت الرحلة؟")) return;
-  cancelTracking();
-  await updateDoc(doc(db,"requests",orderId),{ status:"completed", completedAt: new Date(), progress:100 });
-  alert("✅ تم إنهاء الرحلة بنجاح");
-  acceptedOrder.innerHTML="";
-  document.getElementById('driverMap').style.display='none';
-  loadOrders();
-};
-
-window.cancelTracking = ()=>{
-  if(trackingInterval){ clearInterval(trackingInterval); trackingInterval=null; }
-};
-
-window.openGoogleMaps = (lat,lng)=>{
-  if(lat && lng){
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
-  } else {
-    alert("موقع الزبون غير متوفر بالإحداثيات، سيتم البحث بالاسم");
-  }
-};
-
 </script>
 </body>
 </html>
