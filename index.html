@@ -13,46 +13,35 @@
 body{background:#f5f7fa;margin:0;padding:12px}
 .card{background:#fff;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.07)}
 input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:10px;margin:7px 0;font-size:15px}
-#map{height:400px;width:100%;border-radius:12px;border:2px solid #27ae60;z-index:1}
+#map{height:380px;width:100%;border-radius:12px;border:2px solid #27ae60}
 #trackMap{height:350px;width:100%;border-radius:12px;border:2px solid #0a3d62;display:none;margin-top:10px}
-.price{ background:#e8f5e9; border:1px dashed #27ae60; padding:12px; border-radius:10px; text-align:center; font-weight:bold; font-size:18px; margin-top:10px}
+.price{background:#e8f5e9;border:1px dashed #27ae60;padding:12px;border-radius:10px;text-align:center;font-weight:bold;font-size:19px;margin-top:10px}
 .btn{width:100%;padding:14px;background:#27ae60;color:#fff;border:0;border-radius:12px;font-size:18px;font-weight:bold;cursor:pointer;margin-top:8px}
 .btn-call-top{background:#0a3d62;text-decoration:none;display:block;text-align:center}
 .btn-cancel{background:#e74c3c}
 .label{font-weight:bold;margin-top:8px;display:block;color:#333}
 .vehicles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
-.v-card{padding:14px;border-radius:12px;border:2px solid #eee;cursor:pointer;text-align:center;user-select:none}
+.v-card{padding:14px;border-radius:12px;border:2px solid #eee;cursor:pointer;text-align:center}
 .v-card.selected{border-color:#27ae60;box-shadow:0 4px 12px rgba(39,174,96,.4);transform:scale(1.02)}
-.v-taxi{background:linear-gradient(135deg,#fff9c4,#ffeb3b)}
-.v-wawa{background:linear-gradient(135deg,#e3f2fd,#90caf9)}
-.v-med{background:linear-gradient(135deg,#e8f5e9,#a5d6a7)}
-.v-big{background:linear-gradient(135deg,#fce4ec,#f48fb1)}
+.v-taxi{background:linear-gradient(135deg,#fff9c4,#ffeb3b)} .v-wawa{background:linear-gradient(135deg,#e3f2fd,#90caf9)} .v-med{background:linear-gradient(135deg,#e8f5e9,#a5d6a7)} .v-big{background:linear-gradient(135deg,#fce4ec,#f48fb1)}
 #loginOverlay{position:fixed;inset:0;background:#f5f7fa;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px}
 .status-bar{display:flex;justify-content:space-between;margin:10px 0}
 .status-step{flex:1;text-align:center;font-size:12px;color:#999}
 .status-step.active{color:#27ae60;font-weight:bold}
-.status-dot{width:22px;height:22px;border-radius:50%;background:#eee;margin:0 auto 4px;display:flex;align-items:center;justify-content:center}
+.status-dot{width:24px;height:24px;border-radius:50%;background:#eee;margin:0 auto 4px;display:flex;align-items:center;justify-content:center}
 .status-step.active .status-dot{background:#27ae60;color:#fff}
 .driver-live-card{border:2px solid #27ae60;background:linear-gradient(135deg,#f0fff4,#e8f5e9)}
 </style>
 </head>
 <body>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { scope: './' })
-  });
-}
-</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js')})}</script>
 
 <div id="loginOverlay">
   <div class="card" style="width:100%;max-width:380px;text-align:center">
     <h2 style="color:#27ae60;margin:0">🚚 نقلي</h2>
-    <p style="color:#555">مرحبا! سجل دخولك للمتابعة</p>
-    <label class="label" style="text-align:right">الاسم الكامل *</label>
-    <input id="loginName" placeholder="مثال: محمد أحمد">
-    <label class="label" style="text-align:right">رقم الهاتف *</label>
-    <input id="loginPhone" placeholder="مثال: 22201234" type="tel">
+    <p>مرحبا! سجل دخولك</p>
+    <label class="label" style="text-align:right">الاسم *</label><input id="loginName">
+    <label class="label" style="text-align:right">رقم الهاتف *</label><input id="loginPhone" type="tel">
     <button class="btn" onclick="doLogin()">✅ دخول</button>
   </div>
 </div>
@@ -60,48 +49,42 @@ if ('serviceWorker' in navigator) {
 <a class="btn btn-call-top" href="tel:+22232449538">📞 طلب باتصال سريع</a>
 <h2 style="text-align:center;color:#27ae60">🚚 نقلي - طلب توصيل</h2>
 
-<!-- حالة الطلب الحية -->
 <div class="card" id="liveStatus" style="display:none">
   <h3 style="margin:0 0 10px 0">📦 حالة طلبك</h3>
   <div class="status-bar">
     <div class="status-step active" id="st1"><div class="status-dot">1</div>تم الإرسال</div>
-    <div class="status-step" id="st2"><div class="status-dot">2</div>قبول السائق</div>
+    <div class="status-step" id="st2"><div class="status-dot">2</div>قبول</div>
     <div class="status-step" id="st3"><div class="status-dot">3</div>في الطريق</div>
     <div class="status-step" id="st4"><div class="status-dot">4</div>تم</div>
   </div>
   <div id="driverLiveInfo"></div>
   <div id="trackMap"></div>
-  <button class="btn" style="background:#ff9800" onclick="shareRide()">📤 مشاركة الرحلة مع العائلة</button>
-  <button class="btn" style="background:#0a3d62" onclick="openGoogleNav()">🗺️ فتح مسار السائق</button>
+  <button class="btn" style="background:#ff9800" onclick="shareRide()">📤 مشاركة الرحلة</button>
 </div>
 
 <div class="card" id="orderForm">
-<label class="label">الاسم الكامل *</label>
-<input id="cName" placeholder="مثال: محمد أحمد">
-<label class="label">رقم الهاتف *</label>
-<input id="cPhone" placeholder="مثال: 22201234">
+<label class="label">الاسم الكامل *</label><input id="cName">
+<label class="label">رقم الهاتف *</label><input id="cPhone">
 <label class="label">نوع السيارة *</label>
-<div class="vehicles" id="vehicles">
-<div class="v-card v-taxi" data-v="تاكسي">🚕<br><b>تاكسي</b><br><small>1500 MRU</small></div>
-<div class="v-card v-wawa selected" data-v="واوا">🛻<br><b>واوا</b><br><small>4000 MRU</small></div>
-<div class="v-card v-med" data-v="شاحنة متوسطة 3 طن">🚚<br><b>متوسطة 3 طن</b><br><small>6000 MRU</small></div>
-<div class="v-card v-big" data-v="شاحنة كبيرة 10 طن">🚛<br><b>كبيرة 10 طن</b><br><small>10000 MRU</small></div>
+<div class="vehicles">
+<div class="v-card v-taxi" data-v="تاكسي">🚕<br><b>تاكسي</b><br><small>100 MRU</small></div>
+<div class="v-card v-wawa selected" data-v="واوا">🛻<br><b>واوا</b><br><small>150 MRU</small></div>
+<div class="v-card v-med" data-v="شاحنة متوسطة 3 طن">🚚<br><b>3 طن</b><br><small>600 MRU</small></div>
+<div class="v-card v-big" data-v="شاحنة كبيرة 10 طن">🚛<br><b>10 طن</b><br><small>1000 MRU</small></div>
 </div>
-<label class="label">نوع البضاعة *</label>
-<select id="gType"><option value="">اختر...</option><option>أثاث منزلي</option><option>مواد غذائية</option><option>مستندات وأوراق</option><option>أجهزة كهربائية</option><option>مواد بناء</option><option>أخرى</option></select>
-<label class="label">وصف البضاعة *</label><textarea id="gDesc" rows="2" placeholder="مثال: ثلاجة + طاولة..."></textarea>
-<label class="label">مكان الاستلام - مقاطعة نواكشوط *</label>
-<select id="pickM"><option value="">اختر المقاطعة...</option><option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>دار النعيم</option><option>الرياض</option><option>الميناء</option><option>السبخة</option></select>
-<label class="label">المنطقة / الحي</label><input id="pickArea" placeholder="مثال: قرب مسجد...">
-<label class="label">المنطقة المتوجه إليها *</label><input id="destArea" placeholder="مثال: نواذيبو - كيفة...">
-<div class="price" id="priceBox">💰 مبلغ الرحلة: 4000 MRU - واوا</div>
-<p style="font-size:12px;color:#888;text-align:center">السعر يحسب تلقائيا + المسافة من الخريطة</p>
+<label class="label">نوع البضاعة *</label><select id="gType"><option value="">اختر...</option><option>أثاث</option><option>مواد غذائية</option><option>مستندات</option><option>أجهزة</option><option>مواد بناء</option><option>أخرى</option></select>
+<label class="label">وصف البضاعة *</label><textarea id="gDesc" rows="2"></textarea>
+<label class="label">مكان الاستلام *</label><select id="pickM"><option value="">اختر المقاطعة...</option><option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>دار النعيم</option><option>الرياض</option><option>الميناء</option><option>السبخة</option></select>
+<input id="pickArea" placeholder="الحي / قرب...">
+<label class="label">المنطقة المتوجه إليها *</label><input id="destArea" placeholder="نواذيبو - كيفة...">
+<div class="price" id="priceBox">💰 مبلغ الرحلة: 150 MRU جديدة - واوا</div>
+<p style="font-size:12px;color:#888;text-align:center">يضاف 5 MRU لكل كم حسب موقعك على الخريطة</p>
 </div>
 
 <div class="card" id="mapCard">
-<label class="label">📍 حدد موقعك على الخريطة - نواكشوط *</label>
+<label class="label">📍 حدد موقعك على الخريطة *</label>
 <div id="map"></div>
-<p id="mapStatus" style="color:red;text-align:center;margin-top:8px">اضغط على الخريطة لتحديد موقعك الحالي</p>
+<p id="mapStatus" style="color:red;text-align:center">اضغط على الخريطة لتحديد موقعك</p>
 </div>
 
 <button class="btn" id="sendBtn">✅ إرسال الطلب الآن</button>
@@ -109,218 +92,106 @@ if ('serviceWorker' in navigator) {
 <div id="msg"></div>
 
 <script>
-function doLogin(){
-  let n=document.getElementById('loginName').value.trim();
-  let p=document.getElementById('loginPhone').value.trim();
-  if(n.length<3) return alert('⚠️ أدخل اسمك الكامل');
-  if(p.length<8) return alert('⚠️ أدخل رقم هاتف صحيح');
-  localStorage.setItem('naqli_name', n);
-  localStorage.setItem('naqli_phone', p);
-  document.getElementById('loginOverlay').style.display='none';
-  document.getElementById('cName').value=n;
-  document.getElementById('cPhone').value=p;
-}
-(function checkLogin(){
-  let savedName=localStorage.getItem('naqli_name');
-  let savedPhone=localStorage.getItem('naqli_phone');
-  if(savedName && savedPhone){
-    document.getElementById('loginOverlay').style.display='none';
-  }
-})();
+function doLogin(){let n=loginName.value.trim(),p=loginPhone.value.trim();if(n.length<3)return alert('أدخل الاسم');if(p.length<8)return alert('رقم خاطئ');localStorage.setItem('naqli_name',n);localStorage.setItem('naqli_phone',p);loginOverlay.style.display='none';cName.value=n;cPhone.value=p;}
+(function(){let a=localStorage.getItem('naqli_name'),b=localStorage.getItem('naqli_phone');if(a&&b)loginOverlay.style.display='none';})();
 </script>
 
 <script type="module">
 import { db } from "./firebase.js";
 import { collection, addDoc, deleteDoc, doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const prices={"تاكسي":1500,"واوا":4000,"شاحنة متوسطة 3 طن":6000,"شاحنة كبيرة 10 طن":10000};
-let selVehicle="واوا"; let userLatLng=null; 
-let lastId=localStorage.getItem('naqli_lastId'); 
-let map, marker, trackMap, driverMarker, customerMarker, unsub = null;
-let currentDriverPos = null;
-let currentOrderId = lastId;
+const prices={"تاكسي":100,"واوا":150,"شاحنة متوسطة 3 طن":600,"شاحنة كبيرة 10 طن":1000};
+let selVehicle="واوا", userLatLng=null, lastId=localStorage.getItem('naqli_lastId'), currentOrderId=lastId;
+let map, marker, trackMap, driverMarker, customerMarker, unsub=null, currentDriverPos=null;
 
-document.querySelectorAll('.v-card').forEach(card=>{
-card.addEventListener('click',()=>{
-document.querySelectorAll('.v-card').forEach(c=>c.classList.remove('selected'));
-card.classList.add('selected');
-selVehicle=card.dataset.v;
-calcPrice();
-});
-});
+document.querySelectorAll('.v-card').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.v-card').forEach(x=>x.classList.remove('selected'));c.classList.add('selected');selVehicle=c.dataset.v;calcPrice();}));
 
 function calcPrice(){
-  let base = prices[selVehicle];
-  let extra = 0;
-  if(userLatLng){
-    // تسعيرة بسيطة حسب البعد عن المركز (كمثال)
-    let dist = map.distance(userLatLng, L.latLng(18.0735,-15.9582)) / 1000;
-    extra = Math.round(dist * 50); // 50 أوقية لكل كم
+  let base=prices[selVehicle], extra=0;
+  if(userLatLng && map){
+    let dist=map.distance(userLatLng, L.latLng(18.0735,-15.9582))/1000;
+    extra=Math.round(dist*5);
   }
-  document.getElementById('priceBox').textContent=`💰 مبلغ الرحلة: ${base + extra} MRU - ${selVehicle} ${extra?`(+${extra} مسافة)`:''}`;
-  return base + extra;
+  let total=base+extra;
+  priceBox.textContent=`💰 مبلغ الرحلة: ${total} MRU جديدة - ${selVehicle} ${extra?`(+${extra} مسافة)`:''}`;
+  return total;
 }
 
 function initMap(){
-map=L.map('map').setView([18.0735,-15.9582],12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-map.on('click',e=>{
-userLatLng=e.latlng;
-if(marker) map.removeLayer(marker);
-marker=L.marker(e.latlng).addTo(map).bindPopup("موقع الاستلام").openPopup();
-let s=document.getElementById('mapStatus');
-s.textContent="✅ تم تحديد الموقع: "+e.latlng.lat.toFixed(4);
-s.style.color="green";
-calcPrice();
-});
-setTimeout(()=>{ map.invalidateSize(); },800);
-
-// لو في طلب قديم، ابدأ تتبعه مباشرة
-if(currentOrderId) startListening(currentOrderId);
+  map=L.map('map').setView([18.0735,-15.9582],12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  map.on('click',e=>{
+    userLatLng=e.latlng;
+    if(marker) map.removeLayer(marker);
+    marker=L.marker(e.latlng).addTo(map).bindPopup("موقع الاستلام").openPopup();
+    mapStatus.textContent="✅ تم تحديد الموقع";
+    mapStatus.style.color="green";
+    calcPrice();
+  });
+  setTimeout(()=>map.invalidateSize(),800);
+  if(currentOrderId) startListening(currentOrderId);
 }
-
-function initTrackMap(){
-  if(trackMap) return;
-  trackMap = L.map('trackMap').setView([18.0735,-15.9582],13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
-}
+function initTrackMap(){ if(trackMap) return; trackMap=L.map('trackMap').setView([18.0735,-15.9582],13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap); }
 
 window.addEventListener('load',initMap);
-document.getElementById('cName').value=localStorage.getItem('naqli_name')||"";
-document.getElementById('cPhone').value=localStorage.getItem('naqli_phone')||"";
-if(lastId) document.getElementById('cancelBtn').style.display="block";
+cName.value=localStorage.getItem('naqli_name')||""; cPhone.value=localStorage.getItem('naqli_phone')||"";
+if(lastId) cancelBtn.style.display="block";
 
-document.getElementById('sendBtn').onclick=async()=>{
-let finalPrice = calcPrice();
-let data={
-name:cName.value.trim(),phone:cPhone.value.trim(),vehicle:selVehicle,
-goodsType:gType.value,goodsDesc:gDesc.value.trim(),
-mouqataa:pickM.value,pickArea:pickArea.value.trim(),destArea:destArea.value.trim(),
-price:finalPrice, customerLat:userLatLng?.lat, customerLng:userLatLng?.lng, lat:userLatLng?.lat,lng:userLatLng?.lng,status:"new",progress:10,createdAt:new Date()
-};
-if(!data.name||!data.phone||!data.goodsDesc||!data.mouqataa||!data.destArea||!userLatLng) return alert("⚠️ أكمل جميع الحقول وحدد موقعك على الخريطة");
-localStorage.setItem('naqli_name',data.name); localStorage.setItem('naqli_phone',data.phone);
-msg.textContent="⏳ جاري الإرسال...";
-try{
-let ref=await addDoc(collection(db,"requests"),data);
-lastId=ref.id; currentOrderId=ref.id; localStorage.setItem('naqli_lastId',lastId);
-msg.innerHTML=`<div style="background:#e8f5e9;padding:14px;border-radius:12px">✅ تم الإرسال! جاري البحث عن سائق...</div>`;
-cancelBtn.style.display="block";
-document.getElementById('orderForm').style.display='none';
-document.getElementById('mapCard').style.display='none';
-sendBtn.style.display='none';
-startListening(ref.id);
-}catch(e){ msg.textContent="خطأ: "+e.message; }
+sendBtn.onclick=async()=>{
+  let finalPrice=calcPrice();
+  let data={name:cName.value.trim(),phone:cPhone.value.trim(),vehicle:selVehicle,goodsType:gType.value,goodsDesc:gDesc.value.trim(),mouqataa:pickM.value,pickArea:pickArea.value.trim(),destArea:destArea.value.trim(),price:finalPrice,customerLat:userLatLng?.lat,customerLng:userLatLng?.lng,lat:userLatLng?.lat,lng:userLatLng?.lng,status:"new",progress:10,createdAt:new Date()};
+  if(!data.name||!data.phone||!data.goodsDesc||!data.mouqataa||!data.destArea||!userLatLng) return alert("أكمل البيانات وحدد موقعك على الخريطة");
+  localStorage.setItem('naqli_name',data.name); localStorage.setItem('naqli_phone',data.phone);
+  msg.textContent="⏳ جاري الإرسال...";
+  try{
+    let ref=await addDoc(collection(db,"requests"),data);
+    lastId=ref.id; currentOrderId=ref.id; localStorage.setItem('naqli_lastId',lastId);
+    msg.innerHTML=`<div style="background:#e8f5e9;padding:14px;border-radius:12px">✅ تم الإرسال! جاري البحث عن سائق...</div>`;
+    cancelBtn.style.display="block"; orderForm.style.display='none'; mapCard.style.display='none'; sendBtn.style.display='none';
+    startListening(ref.id);
+  }catch(e){ msg.textContent="خطأ: "+e.message; }
 };
 
-document.getElementById('cancelBtn').onclick=async()=>{
-let id=currentOrderId||localStorage.getItem('naqli_lastId');
-if(!id) return;
-if(!confirm("هل تريد إلغاء طلبك؟")) return;
-await deleteDoc(doc(db,"requests",id));
-msg.innerHTML=`<div style="background:#ffebee;padding:10px;border-radius:10px">❌ تم الإلغاء</div>`;
-cancelBtn.style.display="none"; localStorage.removeItem('naqli_lastId'); currentOrderId=null;
-if(unsub) unsub();
-location.reload();
+cancelBtn.onclick=async()=>{
+  let id=currentOrderId||localStorage.getItem('naqli_lastId'); if(!id) return;
+  if(!confirm("إلغاء الطلب؟")) return;
+  await deleteDoc(doc(db,"requests",id));
+  msg.innerHTML=`<div style="background:#ffebee;padding:10px;border-radius:10px">❌ تم الإلغاء</div>`;
+  cancelBtn.style.display="none"; localStorage.removeItem('naqli_lastId'); currentOrderId=null; if(unsub) unsub(); location.reload();
 };
 
 function startListening(orderId){
-  document.getElementById('liveStatus').style.display='block';
-  document.getElementById('trackMap').style.display='block';
-  initTrackMap();
-  setTimeout(()=>trackMap.invalidateSize(),500);
-
+  liveStatus.style.display='block'; trackMap.style.display='block'; initTrackMap(); setTimeout(()=>trackMap.invalidateSize(),500);
   if(unsub) unsub();
-  unsub = onSnapshot(doc(db,"requests",orderId), async snap=>{
-    if(!snap.exists()){
-      document.getElementById('liveStatus').innerHTML="<h3>❌ تم إلغاء الطلب</h3>";
-      return;
-    }
-    let o = snap.data();
-    // تحديث مراحل الحالة
-    document.querySelectorAll('.status-step').forEach(s=>s.classList.remove('active'));
-    document.getElementById('st1').classList.add('active');
-    if(o.status==='accepted' || o.driverId){ document.getElementById('st2').classList.add('active'); }
-    if(o.status==='on_the_way'){ document.getElementById('st2').classList.add('active'); document.getElementById('st3').classList.add('active'); }
+  unsub=onSnapshot(doc(db,"requests",orderId), async snap=>{
+    if(!snap.exists()){liveStatus.innerHTML="<h3>❌ تم إلغاء الطلب</h3>"; return;}
+    let o=snap.data();
+    document.querySelectorAll('.status-step').forEach(s=>s.classList.remove('active')); st1.classList.add('active');
+    if(o.driverId||o.status!=='new') st2.classList.add('active');
+    if(o.status==='on_the_way') st3.classList.add('active');
     if(o.status==='completed'){ document.querySelectorAll('.status-step').forEach(s=>s.classList.add('active')); }
-
-    // لو قبل سائق
     if(o.driverId){
-      let drSnap = await getDoc(doc(db,"drivers", o.driverId));
-      let dr = drSnap.exists()? drSnap.data() : {name:o.driverName, phone:o.driverPhone, vehicle:o.driverVehicle, plate:o.driverPlate};
-      currentDriverPos = o.driverLat ? [o.driverLat, o.driverLng] : null;
-
-      document.getElementById('driverLiveInfo').innerHTML = `
-        <div class="card driver-live-card">
-          <h4 style="margin:0">🚕 السائق في الطريق إليك</h4>
-          <div style="display:flex;gap:12px;align-items:center;margin:10px 0">
-            <img src="${dr.photoBase64||'https://via.placeholder.com/70'}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid #27ae60">
-            <div>
-              <b>${dr.name||o.driverName}</b><br>
-              ${dr.phone||o.driverPhone}<br>
-              <small>${dr.vehicle||''} - لوحة: ${dr.plate||''}</small>
-            </div>
-          </div>
-          <a href="tel:${dr.phone||o.driverPhone}"><button class="btn" style="background:#0a3d62">📞 اتصال بالسائق</button></a>
-          <a href="https://wa.me/${(dr.phone||o.driverPhone||'').replace(/[^0-9]/g,'')}" target="_blank"><button class="btn" style="background:#25D366">💬 واتساب السائق</button></a>
-        </div>
-      `;
-
-      // تحديث الخريطة
-      if(o.driverLat && o.driverLng){
+      let drSnap=await getDoc(doc(db,"drivers",o.driverId)); let dr=drSnap.exists()?drSnap.data():{name:o.driverName,phone:o.driverPhone,vehicle:o.driverVehicle,plate:o.driverPlate,photoBase64:o.driverPhoto};
+      currentDriverPos=o.driverLat?[o.driverLat,o.driverLng]:null;
+      driverLiveInfo.innerHTML=`<div class="card driver-live-card"><h4 style="margin:0">🚕 السائق في الطريق إليك</h4><div style="display:flex;gap:12px;align-items:center;margin:10px 0"><img src="${dr.photoBase64||'https://via.placeholder.com/70'}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid #27ae60"><div><b>${dr.name||o.driverName}</b><br>${dr.phone||o.driverPhone}<br><small>${dr.vehicle||''} - ${dr.plate||''}</small></div></div><a href="tel:${dr.phone||o.driverPhone}"><button class="btn" style="background:#0a3d62">📞 اتصال</button></a></div>`;
+      if(o.driverLat&&o.driverLng){
         if(driverMarker) trackMap.removeLayer(driverMarker);
-        driverMarker = L.marker([o.driverLat, o.driverLng]).addTo(trackMap).bindPopup("السائق: "+dr.name);
-        trackMap.setView([o.driverLat, o.driverLng], 15);
-        if(o.customerLat && o.customerLng){
+        driverMarker=L.marker([o.driverLat,o.driverLng]).addTo(trackMap).bindPopup("السائق");
+        trackMap.setView([o.driverLat,o.driverLng],15);
+        if(o.customerLat&&o.customerLng){
           if(customerMarker) trackMap.removeLayer(customerMarker);
-          customerMarker = L.marker([o.customerLat, o.customerLng], {icon: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/149/149071.png', iconSize:[32,32]})}).addTo(trackMap).bindPopup("موقعك");
+          customerMarker=L.marker([o.customerLat,o.customerLng]).addTo(trackMap).bindPopup("موقعك");
         }
       }
-
-      if(o.status==='completed'){
-        document.getElementById('driverLiveInfo').innerHTML += `<div style="background:#27ae60;color:#fff;padding:10px;border-radius:8px;text-align:center;margin-top:10px">✅ انتهت الرحلة - شكرا لاستخدام نقلي</div>`;
-        setTimeout(()=>{ localStorage.removeItem('naqli_lastId'); }, 3000);
-      }
+      if(o.status==='completed'){ driverLiveInfo.innerHTML+=`<div style="background:#27ae60;color:#fff;padding:10px;border-radius:8px;text-align:center;margin-top:10px">✅ انتهت الرحلة - شكرا لك</div>`; setTimeout(()=>localStorage.removeItem('naqli_lastId'),3000); }
     }
   });
 }
 
-window.shareRide = ()=>{
-  let text = `تتبع رحلتي على نقلي - الطلب ${currentOrderId} - موقع السائق حي: https://maps.google.com/?q=${currentDriverPos?currentDriverPos.join(','):''}`;
-  if(navigator.share){ navigator.share({title:'رحلتي على نقلي', text}); }
-  else { prompt("انسخ رابط المشاركة:", text); }
+window.shareRide=()=>{
+  let text=`تتبع رحلتي على نقلي - https://maps.google.com/?q=${currentDriverPos?currentDriverPos.join(','):''}`;
+  if(navigator.share){navigator.share({title:'رحلتي',text});} else {prompt("انسخ رابط المشاركة:",text);}
 };
-
-window.openGoogleNav = ()=>{
-  if(currentDriverPos){
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${currentDriverPos[0]},${currentDriverPos[1]}`, '_blank');
-  } else { alert("السائق لم يبدأ التتبع بعد"); }
-};
-
 </script>
 </body>
 </html>
-
-
-    }
-    // السائقين
-    match /drivers/{id} {
-      allow read: if true;
-      allow create: if true;
-      allow update: if true;
-    }
-    // فقط الأدمن يمكنه قراءة logs
-    match /logs/{id} {
-      allow read, write: if true;
-    }
-    match /adminMessages/{id} {
-      allow read, write: if true;
-    }
-  }
-}
-بعد الرفع، جرب:
-
-1.  اطلب كزبون → سيظهر لك `حالة طلبك`
-2.  اقبل كسائق → الزبون سيرى صورتك ولوحتك وموقعك يتحرك حي
-
-المرحلة القادمة هي *نظام المحفظة والعمولة*، هل أجهزه لك الآن؟
