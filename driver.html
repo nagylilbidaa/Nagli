@@ -1,9 +1,12 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="manifest.json">
 <title>نقلي - السائق</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;font-family:Tajawal,Arial}
 body{background:#f0f2f5;margin:0;padding:12px}
@@ -22,12 +25,12 @@ input,select{width:100%;padding:13px;border:1.5px solid #e5e7eb;border-radius:11
 .acceptedBox{background:#fff;border:2px solid #27ae60;border-radius:16px;padding:18px;margin:12px 0}
 .phoneNum{font-size:28px;font-weight:bold;color:#0a1931;direction:ltr;text-align:center;margin:12px 0;letter-spacing:1px}
 .greenTop{background:#27ae60;color:#fff;padding:16px;border-radius:12px;text-align:center;font-size:18px;font-weight:bold;margin-bottom:12px}
+#driverMap{height:350px;border-radius:12px;margin-top:12px;display:none}
 </style>
 </head>
 <body>
 <div class="header"><h2 style="margin:0">🚛 نقلي - السائق</h2></div>
 
-<!-- 1. دخول السائق هو أول ما يظهر -->
 <div class="card" id="loginCard">
 <h3 style="margin-top:0">🔑 دخول السائق المعتمد</h3>
 <input id="loginPhone" type="tel" placeholder="رقم الهاتف *">
@@ -36,7 +39,6 @@ input,select{width:100%;padding:13px;border:1.5px solid #e5e7eb;border-radius:11
 <div class="link" onclick="showRegister()">سائق جديد؟ سجل هنا ↓</div>
 </div>
 
-<!-- 2. تسجيل سائق جديد - مخفي حتى يضغط -->
 <div class="card" id="regForm">
 <h3 style="margin-top:0">📝 تسجيل سائق جديد</h3>
 <input id="dName" placeholder="الاسم الكامل *">
@@ -57,6 +59,7 @@ input,select{width:100%;padding:13px;border:1.5px solid #e5e7eb;border-radius:11
 
 <div id="driverInfo"></div>
 <div id="acceptedOrder"></div>
+<div id="driverMap"></div>
 <div id="orders"></div>
 <div id="imgModal" onclick="this.style.display='none'"><img id="modalImg"></div>
 
@@ -76,6 +79,8 @@ window.showRegister=()=>{ document.getElementById('regForm').style.display='bloc
 window.showLogin=()=>{ document.getElementById('regForm').style.display='none'; document.getElementById('loginCard').style.display='block'; }
 
 let curDriver=null;
+let map, driverMarker, customerMarker, trackingInterval = null;
+
 regBtn.onclick=async()=>{
 let name=dName.value.trim(), phone=dPhone.value.trim(), pass=dPass.value.trim(), vehicle=dVehicle.value, plate=dPlate.value.trim();
 if(!name||!phone||!pass||!plate||!dPhoto.files[0]||!dIdPhoto.files[0]) return alert("⚠️ أكمل جميع البيانات والصور");
@@ -108,24 +113,107 @@ snap.forEach(s=>{ let o=s.data(); h+=`<div class="card"><b>${o.mouqataa} → ${o
 orders.innerHTML=h||"لا يوجد طلبات جديدة";
 }
 
+function initDriverMap(cLat, cLng, dLat, dLng){
+  document.getElementById('driverMap').style.display='block';
+  if(!map){
+    map = L.map('driverMap').setView([dLat||cLat||18.0735, dLng||cLng||-15.9582], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  }
+  if(customerMarker) map.removeLayer(customerMarker);
+  if(cLat && cLng){
+    customerMarker = L.marker([cLat, cLng], {icon: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/149/149071.png', iconSize:[36,36]})}).addTo(map).bindPopup("الزبون");
+  }
+  if(dLat && dLng){
+    if(driverMarker) map.removeLayer(driverMarker);
+    driverMarker = L.marker([dLat, dLng]).addTo(map).bindPopup("أنت");
+    map.setView([dLat, dLng], 14);
+  }
+}
+
 window.acceptOrder=async(id)=>{
 let ref=doc(db,"requests",id); let snap=await getDoc(ref); let o=snap.data();
 let customerPhone=o.customerPhone||o.phone||o.clientPhone||"";
 let customerName=o.customerName||o.clientName||"الزبون";
-await updateDoc(ref,{status:"accepted",driverName:curDriver.name,driverPhone:curDriver.phone,progress:50});
+let custLat = o.customerLat || o.lat || o.pickupLat;
+let custLng = o.customerLng || o.lng || o.pickupLng;
+
+// 1. قبول الطلب في Firebase
+await updateDoc(ref,{
+  status:"accepted",
+  driverId: curDriver.id,
+  driverName:curDriver.name,
+  driverPhone:curDriver.phone,
+  driverVehicle:curDriver.vehicle,
+  driverPlate:curDriver.plate,
+  progress:50,
+  acceptedAt: new Date()
+});
+
+
 acceptedOrder.innerHTML=`
-<div class="greenTop">✅ تم قبول الطلب</div>
+<div class="greenTop">✅ تم قبول الطلب - يتم تتبعك الآن من طرف الإدارة</div>
 <div class="acceptedBox">
 <div style="color:#666;font-size:14px">رقم العميل</div>
 <div class="phoneNum">${customerPhone}</div>
 <p><b>العميل:</b> ${customerName}</p>
 <p><b>المسار:</b> ${o.mouqataa} → ${o.destArea}</p>
+<p style="color:green;font-size:13px">📍 موقعك يرسل للأدمن كل 5 ثواني حتى نهاية الرحلة</p>
 <button class="btn btn-blue" onclick="window.location.href='tel:${customerPhone}'">📞 اتصال</button>
 <button class="btn btn-whats" onclick="window.open('https://wa.me/${customerPhone.replace(/[^0-9]/g,'')}','_blank')">💬 واتساب</button>
-<button class="btn" style="background:#eee;color:#333;margin-top:12px" onclick="acceptedOrder.innerHTML='';loadOrders()">رجوع للطلبات</button>
+<button class="btn" style="background:#ff9800;color:#fff" onclick="openGoogleMaps(${custLat},${custLng})">🗺️ فتح في خرائط جوجل</button>
+<button class="btn btn-green" onclick="finishTrip('${id}')">✅ إنهاء الرحلة</button>
+<button class="btn" style="background:#eee;color:#333;margin-top:12px" onclick="cancelTracking();acceptedOrder.innerHTML='';document.getElementById('driverMap').style.display='none';loadOrders()">رجوع للطلبات</button>
 </div>`;
 orders.innerHTML="";
+
+// 3. بدء التتبع الحي للسائق
+startTracking(id, custLat, custLng);
 };
+
+function startTracking(orderId, custLat, custLng){
+  if(trackingInterval) clearInterval(trackingInterval);
+  
+  // أول موقع فورا
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    let dLat = pos.coords.latitude;
+    let dLng = pos.coords.longitude;
+    await updateDoc(doc(db,"requests",orderId),{ driverLat: dLat, driverLng: dLng });
+    initDriverMap(custLat, custLng, dLat, dLng);
+  });
+
+  // ثم كل 5 ثواني
+  trackingInterval = setInterval(()=>{
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      let dLat = pos.coords.latitude;
+      let dLng = pos.coords.longitude;
+      await updateDoc(doc(db,"requests",orderId),{ driverLat: dLat, driverLng: dLng, lastUpdate: new Date() });
+      initDriverMap(custLat, custLng, dLat, dLng);
+    }, err=>{ console.log("خطأ GPS", err); });
+  }, 5000);
+}
+
+window.finishTrip = async(orderId)=>{
+  if(!confirm("هل انتهت الرحلة؟")) return;
+  cancelTracking();
+  await updateDoc(doc(db,"requests",orderId),{ status:"completed", completedAt: new Date(), progress:100 });
+  alert("✅ تم إنهاء الرحلة بنجاح");
+  acceptedOrder.innerHTML="";
+  document.getElementById('driverMap').style.display='none';
+  loadOrders();
+};
+
+window.cancelTracking = ()=>{
+  if(trackingInterval){ clearInterval(trackingInterval); trackingInterval=null; }
+};
+
+window.openGoogleMaps = (lat,lng)=>{
+  if(lat && lng){
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+  } else {
+    alert("موقع الزبون غير متوفر بالإحداثيات، سيتم البحث بالاسم");
+  }
+};
+
 </script>
 </body>
 </html>
