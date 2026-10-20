@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -32,17 +33,14 @@ input{width:100%;padding:12px;border:1.5px solid #ddd;border-radius:10px;margin:
 <body>
 <div class="header"><h2 style="margin:0">👑 إدارة نقلي - عمولة 10%</h2></div>
 
-<!-- تسجيل دخول - مطلوب كل مرة -->
 <div id="loginCard" class="card" style="max-width:400px;margin:30px auto">
 <h3 style="text-align:center">🔑 دخول الإدارة</h3>
 <input id="adminUser" placeholder="اسم المستخدم *">
-<input id="adminPass" type="password" placeholder="كلمة السر *" autocomplete="off">
+<input id="adminPass" type="password" placeholder="كلمة السر *">
 <button class="btn btn-blue" style="width:100%" onclick="adminLogin()">دخول</button>
-<small style="color:#888;display:block;text-align:center;margin-top:8px">لا يتم حفظ كلمة السر - مطلوبة كل مرة</small>
 </div>
 
 <div id="mainContent" class="hidden">
-
 <div class="stats">
 <div class="stat-card"><div>طلبات اليوم</div><div class="stat-num" id="todayOrders">0</div></div>
 <div class="stat-card"><div>أرباحك اليوم (10%)</div><div class="stat-num" id="todayProfit">0 MRU</div></div>
@@ -58,35 +56,44 @@ input{width:100%;padding:12px;border:1.5px solid #ddd;border-radius:10px;margin:
 <div id="ordersTab"></div>
 <div id="driversTab" style="display:none"></div>
 <div id="mapTab" style="display:none"><div class="card"><div id="adminMap"></div></div></div>
-
-<!-- تفاصيل تتبع الرحلة -->
 <div id="tripDetails" class="card hidden"></div>
 <div id="trackMap" class="hidden"></div>
-
 <button class="btn" style="background:#eee;width:100%;margin-top:15px" onclick="logout()">🚪 خروج</button>
 </div>
 
 <script type="module">
 import { db } from "./firebase.js";
 import { collection, doc, updateDoc, onSnapshot, query, orderBy, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-let adminMap, trackMap, markers=[], driverMarker=null, custMarker=null, routeLine=null, liveUnsub=null;
+let adminMap, trackMap, driverMarker=null, custMarker=null, routeLine=null, liveUnsub=null;
 
 window.adminLogin=async()=>{
-  let u=document.getElementById('adminUser').value.trim(), p=document.getElementById('adminPass').value.trim();
-  if(!u||!p) return alert("أدخل اسم المستخدم وكلمة السر");
+  let u=document.getElementById('adminUser').value.trim();
+  let p=document.getElementById('adminPass').value.trim();
+  if(!u||!p) return alert("أدخل البيانات");
   try{
-    let snap=await getDocs(query(collection(db,"admins"), where("username","==",u), where("password","==",p)));
-    if(snap.empty) return alert("بيانات خاطئة");
-    document.getElementById('adminUser').value=""; document.getElementById('adminPass').value="";
+    // الحل: نبحث فقط بـ username ثم نتحقق من password في الجافاسكريبت - لا يحتاج index
+    let snap=await getDocs(query(collection(db,"admins"), where("username","==",u)));
+    if(snap.empty) return alert("اسم المستخدم غير موجود");
+    
+    let found=false;
+    snap.forEach(docSnap=>{
+      if(docSnap.data().password === p) found=true;
+    });
+    
+    if(!found) return alert("بيانات خاطئة - كلمة السر خطأ");
+    
     document.getElementById('loginCard').classList.add('hidden');
     document.getElementById('mainContent').classList.remove('hidden');
     initAdminMap(); loadOrders(); loadDrivers();
-  }catch(e){ alert("خطأ: "+e.message); }
+  }catch(e){ 
+    alert("خطأ: "+e.message+"\nتأكد من نشر firestore.rules"); 
+    console.error(e);
+  }
 }
+
 window.logout=()=>{
   document.getElementById('loginCard').classList.remove('hidden');
   document.getElementById('mainContent').classList.add('hidden');
-  document.getElementById('adminUser').value=""; document.getElementById('adminPass').value="";
   if(liveUnsub) liveUnsub();
 }
 
@@ -96,14 +103,10 @@ window.showTab=(t,el)=>{
   document.getElementById('driversTab').style.display=t==='drivers'?'block':'none';
   document.getElementById('mapTab').style.display=t==='map'?'block':'none';
   if(el) el.classList.add('active');
-  if(t==='map') setTimeout(()=>{adminMap.invalidateSize();},300);
+  if(t==='map' && adminMap) setTimeout(()=>adminMap.invalidateSize(),300);
   if(t!=='orders'){ document.getElementById('tripDetails').classList.add('hidden'); document.getElementById('trackMap').classList.add('hidden'); }
 }
-function initAdminMap(){ 
-  if(adminMap) return;
-  adminMap=L.map('adminMap').setView([18.0735,-15.9582],12); 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMap); 
-}
+function initAdminMap(){ if(adminMap) return; adminMap=L.map('adminMap').setView([18.0735,-15.9582],12); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMap); }
 function initTrackMap(lat,lng){
   document.getElementById('trackMap').classList.remove('hidden');
   document.getElementById('trackMap').style.display='block';
@@ -112,8 +115,7 @@ function initTrackMap(lat,lng){
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
   setTimeout(()=>trackMap.invalidateSize(),400);
 }
-
-async function loadOrders(){
+function loadOrders(){
   onSnapshot(query(collection(db,"requests"), orderBy("createdAt","desc")), snap=>{
     let h="", today=0, profit=0, done=0; let todayStr=new Date().toDateString();
     snap.forEach(s=>{
@@ -122,7 +124,7 @@ async function loadOrders(){
       if(d.toDateString()===todayStr){ today++; profit+=parseFloat(commission); }
       if(o.status==='completed') done++;
       let badge=o.status==='new'?'b-new':o.status==='accepted'?'b-accepted':o.status==='on_the_way'?'b-way':'b-done';
-      h+=`<div class="card" style="cursor:pointer" onclick="openTrip('${s.id}')"><div style="display:flex;justify-content:space-between"><b>${o.mouqataa} → ${o.destArea}</b><span class="badge ${badge}">${o.status}</span></div><small>${o.name} - ${o.vehicle} - ${o.price} MRU - السائق: ${o.driverName||'لم يقبل'}</small><br>💰 عمولتك (10%): <b style="color:#27ae60">${commission} MRU</b> | للسائق: ${driverProfit} MRU<br><small>${d.toLocaleString('ar-MR')}</small><br><button class="btn btn-blue">🔍 تتبع الرحلة كامل</button></div>`;
+      h+=`<div class="card" onclick="openTrip('${s.id}')"><b>${o.mouqataa} → ${o.destArea}</b> <span class="badge ${badge}">${o.status}</span><br><small>${o.name} - ${o.vehicle} - ${o.price} MRU</small><br>💰 عمولتك: ${commission} | للسائق: ${driverProfit}</div>`;
     });
     document.getElementById('ordersTab').innerHTML=h||"<div class='card'>لا يوجد طلبات</div>";
     document.getElementById('todayOrders').textContent=today;
@@ -130,71 +132,32 @@ async function loadOrders(){
     document.getElementById('doneOrders').textContent=done;
   });
 }
-async function loadDrivers(){
+function loadDrivers(){
   onSnapshot(collection(db,"drivers"), snap=>{
-    let h=""; snap.forEach(d=>{let o=d.data(); h+=`<div class="card" style="display:flex;gap:10px"><img src="${o.photoBase64||''}" style="width:60px;height:60px;border-radius:50%;object-fit:cover"><div style="flex:1"><b>${o.name}</b> - ${o.vehicle}<br>${o.phone}<br><span class="badge ${o.status==='approved'?'b-done':'b-new'}">${o.status}</span></div><div>${o.status!=='approved'?`<button class="btn btn-green" onclick="approve('${d.id}')">✅ موافقة</button>`:''}<button class="btn btn-red" onclick="blockDriver('${d.id}')">حظر</button></div></div>`;});
+    let h=""; snap.forEach(d=>{let o=d.data(); h+=`<div class="card" style="display:flex;gap:10px"><img src="${o.photoBase64||''}" style="width:60px;height:60px;border-radius:50%"><div style="flex:1"><b>${o.name}</b><br>${o.phone}</div><div>${o.status!=='approved'?`<button class="btn btn-green" onclick="approve('${d.id}')">✅</button>`:''}<button class="btn btn-red" onclick="blockDriver('${d.id}')">حظر</button></div></div>`;});
     document.getElementById('driversTab').innerHTML=h;
   });
 }
 window.approve=async(id)=>{ await updateDoc(doc(db,"drivers",id),{status:"approved"}); }
 window.blockDriver=async(id)=>{ await updateDoc(doc(db,"drivers",id),{status:"blocked"}); }
-
 window.openTrip=async(id)=>{
-  let snap=await getDoc(doc(db,"requests",id)); if(!snap.exists()) return; let o=snap.data();
+  let snap=await getDoc(doc(db,"requests",id)); let o=snap.data();
   let comm=(o.price*0.10).toFixed(1), driverP=(o.price*0.90).toFixed(1);
   let created=o.createdAt?.seconds? new Date(o.createdAt.seconds*1000).toLocaleString('ar'): '-';
-  let accepted=o.acceptedAt?.seconds? new Date(o.acceptedAt.seconds*1000).toLocaleString('ar'): (o.acceptedAt? new Date(o.acceptedAt).toLocaleString('ar'):'لم يقبل بعد');
-  let completed=o.completedAt?.seconds? new Date(o.completedAt.seconds*1000).toLocaleString('ar'): (o.completedAt? new Date(o.completedAt).toLocaleString('ar'):'لم يصل بعد');
-
   document.getElementById('tripDetails').classList.remove('hidden');
-  document.getElementById('tripDetails').innerHTML=`
-  <h3>📋 تتبع الرحلة - ${o.mouqataa} → ${o.destArea}</h3>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-  <div><b>👤 الزبون:</b><br>الاسم: ${o.name}<br>الهاتف: ${o.phone}<br>البضاعة: ${o.goodsDesc||'-'}<br>السعر: ${o.price} MRU</div>
-  <div><b>🚚 السائق:</b><br>الاسم: ${o.driverName||'لم يقبل'}<br>الهاتف: ${o.driverPhone||'-'}<br>المركبة: ${o.vehicle}<br>ربح السائق: ${driverP} (90%) | عمولتك: ${comm} (10%)</div>
-  </div>
-  <div class="timeline">
-  <div><b>🕐 لحظة الطلب:</b> ${created}</div>
-  <div><b>✅ لحظة القبول (الانطلاق):</b> ${accepted}</div>
-  <div><b>🚚 في الطريق:</b> ${o.status=='on_the_way'||o.status=='completed'?'السائق في الطريق الآن':o.status=='accepted'?'جاهز للانطلاق':'بانتظار القبول'}</div>
-  <div><b>🏁 الوصول للوجهة:</b> ${completed}</div>
-  </div>
-  <div style="display:flex;gap:6px">
-  <a href="tel:${o.phone}" style="flex:1"><button class="btn btn-blue" style="width:100%">📞 زبون</button></a>
-  <a href="tel:${o.driverPhone}" style="flex:1"><button class="btn btn-green" style="width:100%">📞 سائق</button></a>
-  <button class="btn btn-orange" style="flex:1" onclick="showLive('${id}')">🗺️ تتبع حي</button>
-  </div>
-  `;
+  document.getElementById('tripDetails').innerHTML=`<h3>📋 ${o.mouqataa} → ${o.destArea}</h3>الزبون: ${o.name} - ${o.phone}<br>السائق: ${o.driverName||'-'}<br>السعر: ${o.price} | عمولتك: ${comm}<br>الطلب: ${created}<br><button class="btn btn-orange" onclick="showLive('${id}')">🗺️ تتبع حي</button>`;
   showLive(id);
 }
-
 window.showLive=async(id)=>{
   let snap=await getDoc(doc(db,"requests",id)); let o=snap.data();
-  if(!o.customerLat) { alert("الزبون لم يشارك GPS لكن يمكنك تتبع السائق"); }
   initTrackMap(o.customerLat||o.driverLat, o.customerLng||o.driverLng);
   if(liveUnsub) liveUnsub();
-  if(custMarker) { try{ trackMap.removeLayer(custMarker);}catch{} }
-  if(driverMarker) { try{ trackMap.removeLayer(driverMarker);}catch{} }
-  if(routeLine) { try{ trackMap.removeLayer(routeLine);}catch{} }
-
-  if(o.customerLat){
-    custMarker=L.marker([o.customerLat,o.customerLng],{icon:L.icon({iconUrl:'https://maps.google.com/mapfiles/ms/icons/red-dot.png',iconSize:[32,32]})}).addTo(trackMap).bindPopup("📍 موقع الزبون بالضبط").openPopup();
-  }
-  if(o.driverLat){
-    driverMarker=L.marker([o.driverLat,o.driverLng],{icon:L.icon({iconUrl:'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',iconSize:[32,32]})}).addTo(trackMap).bindPopup("🚚 السائق - موقع حي");
-  }
-  if(o.customerLat && o.driverLat){
-    routeLine=L.polyline([[o.driverLat,o.driverLng],[o.customerLat,o.customerLng]],{color:'#e74c3c',dashArray:'8 8'}).addTo(trackMap);
-    trackMap.fitBounds(routeLine.getBounds(),{padding:[30,30]});
-  }
-
-  // تحديث حي كلما تحرك السائق
+  if(o.customerLat) custMarker=L.marker([o.customerLat,o.customerLng]).addTo(trackMap).bindPopup("📍 الزبون");
+  if(o.driverLat) driverMarker=L.marker([o.driverLat,o.driverLng]).addTo(trackMap).bindPopup("🚚 السائق");
   liveUnsub=onSnapshot(doc(db,"requests",id), s=>{
     let d=s.data(); if(!d.driverLat) return;
     if(driverMarker) trackMap.removeLayer(driverMarker);
-    driverMarker=L.marker([d.driverLat,d.driverLng],{icon:L.icon({iconUrl:'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',iconSize:[32,32]})}).addTo(trackMap).bindPopup(`🚚 السائق - ${new Date().toLocaleTimeString('ar')}`);
-    if(routeLine) trackMap.removeLayer(routeLine);
-    if(d.customerLat) routeLine=L.polyline([[d.driverLat,d.driverLng],[d.customerLat,d.customerLng]],{color:'#e74c3c'}).addTo(trackMap);
+    driverMarker=L.marker([d.driverLat,d.driverLng]).addTo(trackMap);
   });
 }
 </script>
