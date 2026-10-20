@@ -3,7 +3,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نقلي - الإدارة 10%</title>
+<title>نقلي - الإدارة</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -12,47 +12,41 @@ body{background:#f0f2f5;margin:0;padding:12px}
 .header{background:#0a1931;color:#fff;padding:18px;text-align:center;border-radius:0 0 18px 18px;margin:-12px -12px 15px -12px}
 .card{background:#fff;border-radius:14px;padding:16px;margin:10px 0;box-shadow:0 2px 8px rgba(0,0,0,.07)}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.stat-card{background:#fff;border-radius:12px;padding:14px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.stat-card{background:#fff;border-radius:12px;padding:14px;text-align:center}
 .stat-num{font-size:22px;font-weight:bold;color:#27ae60}
 .btn{padding:10px 14px;border:0;border-radius:8px;font-weight:bold;cursor:pointer;margin:4px}
 .btn-green{background:#27ae60;color:#fff}.btn-red{background:#e74c3c;color:#fff}.btn-blue{background:#1a73e8;color:#fff}.btn-orange{background:#ff9800;color:#fff}
 #adminMap{height:400px;border-radius:12px;border:2px solid #0a1931}
 #trackMap{height:400px;border-radius:12px;border:2px solid #0a1931;margin-top:10px}
-.badge{padding:3px 8px;border-radius:6px;font-size:12px;color:#fff}
-.b-new{background:#3498db}.b-accepted{background:#f39c12}.b-way{background:#9b59b6}.b-done{background:#27ae60}
 .tabs{display:flex;gap:8px;margin:10px 0}
 .tab{flex:1;padding:12px;background:#eee;border:0;border-radius:10px;font-weight:bold;cursor:pointer}
 .tab.active{background:#0a1931;color:#fff}
-input{width:100%;padding:12px;border:1.5px solid #ddd;border-radius:10px;margin:6px 0}
+input{width:100%;padding:12px;border:1.5px solid #ddd;border-radius:10px;margin:6px 0;direction:ltr;text-align:left}
 .hidden{display:none}
-.timeline{border-right:3px solid #0a1931;padding-right:14px;margin:12px 0}
-.timeline div{margin:10px 0;position:relative}
-.timeline div::before{content:'';width:12px;height:12px;background:#27ae60;border-radius:50%;position:absolute;right:-20px;top:4px}
 </style>
 </head>
 <body>
-<div class="header"><h2 style="margin:0">👑 إدارة نقلي - عمولة 10%</h2></div>
+<div class="header"><h2 style="margin:0">👑 إدارة نقلي</h2></div>
 
 <div id="loginCard" class="card" style="max-width:400px;margin:30px auto">
-<h3 style="text-align:center">🔑 دخول الإدارة</h3>
-<input id="adminUser" placeholder="اسم المستخدم *">
-<input id="adminPass" type="password" placeholder="كلمة السر *">
+<h3 style="text-align:center">🔑 دخول الإدارة بالإيميل</h3>
+<input id="adminEmail" type="email" placeholder="email@example.com">
+<input id="adminPass" type="password" placeholder="كلمة السر">
 <button class="btn btn-blue" style="width:100%" onclick="adminLogin()">دخول</button>
+<small id="loginError" style="color:red;display:block;text-align:center;margin-top:8px"></small>
 </div>
 
 <div id="mainContent" class="hidden">
 <div class="stats">
 <div class="stat-card"><div>طلبات اليوم</div><div class="stat-num" id="todayOrders">0</div></div>
-<div class="stat-card"><div>أرباحك اليوم (10%)</div><div class="stat-num" id="todayProfit">0 MRU</div></div>
+<div class="stat-card"><div>أرباحك اليوم</div><div class="stat-num" id="todayProfit">0 MRU</div></div>
 <div class="stat-card"><div>مكتملة</div><div class="stat-num" id="doneOrders">0</div></div>
 </div>
-
 <div class="tabs">
 <button class="tab active" onclick="showTab('orders',this)">📦 الطلبات</button>
 <button class="tab" onclick="showTab('drivers',this)">🚕 السائقين</button>
 <button class="tab" onclick="showTab('map',this)">🗺️ الخريطة</button>
 </div>
-
 <div id="ordersTab"></div>
 <div id="driversTab" style="display:none"></div>
 <div id="mapTab" style="display:none"><div class="card"><div id="adminMap"></div></div></div>
@@ -63,35 +57,33 @@ input{width:100%;padding:12px;border:1.5px solid #ddd;border-radius:10px;margin:
 
 <script type="module">
 import { db } from "./firebase.js";
-import { collection, doc, updateDoc, onSnapshot, query, orderBy, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-let adminMap, trackMap, driverMarker=null, custMarker=null, routeLine=null, liveUnsub=null;
+import { collection, doc, updateDoc, onSnapshot, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+let adminMap, trackMap, driverMarker=null, liveUnsub=null;
+const auth = getAuth();
 
 window.adminLogin=async()=>{
-  let u=document.getElementById('adminUser').value.trim();
-  let p=document.getElementById('adminPass').value.trim();
-  if(!u||!p) return alert("أدخل البيانات");
+  let email=document.getElementById('adminEmail').value.trim();
+  let pass=document.getElementById('adminPass').value.trim();
+  document.getElementById('loginError').innerText="";
+  if(!email||!pass) return alert("أدخل الإيميل وكلمة السر");
   try{
-    // الحل: نبحث فقط بـ username ثم نتحقق من password في الجافاسكريبت - لا يحتاج index
-    let snap=await getDocs(query(collection(db,"admins"), where("username","==",u)));
-    if(snap.empty) return alert("اسم المستخدم غير موجود");
-    
-    let found=false;
-    snap.forEach(docSnap=>{
-      if(docSnap.data().password === p) found=true;
-    });
-    
-    if(!found) return alert("بيانات خاطئة - كلمة السر خطأ");
-    
+    await signInWithEmailAndPassword(auth, email, pass);
     document.getElementById('loginCard').classList.add('hidden');
     document.getElementById('mainContent').classList.remove('hidden');
     initAdminMap(); loadOrders(); loadDrivers();
-  }catch(e){ 
-    alert("خطأ: "+e.message+"\nتأكد من نشر firestore.rules"); 
-    console.error(e);
+  }catch(e){
+    let msg = e.code;
+    if(msg.includes("user-not-found")) msg="الإيميل غير موجود";
+    else if(msg.includes("wrong-password") || msg.includes("invalid-credential")) msg="كلمة السر خطأ";
+    else if(msg.includes("invalid-email")) msg="صيغة الإيميل خطأ";
+    document.getElementById('loginError').innerText = msg + " ("+e.code+")";
   }
 }
 
-window.logout=()=>{
+window.logout=async()=>{
+  await signOut(auth);
   document.getElementById('loginCard').classList.remove('hidden');
   document.getElementById('mainContent').classList.add('hidden');
   if(liveUnsub) liveUnsub();
@@ -104,7 +96,6 @@ window.showTab=(t,el)=>{
   document.getElementById('mapTab').style.display=t==='map'?'block':'none';
   if(el) el.classList.add('active');
   if(t==='map' && adminMap) setTimeout(()=>adminMap.invalidateSize(),300);
-  if(t!=='orders'){ document.getElementById('tripDetails').classList.add('hidden'); document.getElementById('trackMap').classList.add('hidden'); }
 }
 function initAdminMap(){ if(adminMap) return; adminMap=L.map('adminMap').setView([18.0735,-15.9582],12); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMap); }
 function initTrackMap(lat,lng){
@@ -119,14 +110,13 @@ function loadOrders(){
   onSnapshot(query(collection(db,"requests"), orderBy("createdAt","desc")), snap=>{
     let h="", today=0, profit=0, done=0; let todayStr=new Date().toDateString();
     snap.forEach(s=>{
-      let o=s.data(); let d=o.createdAt?.toDate ? o.createdAt.toDate() : (o.createdAt?.seconds? new Date(o.createdAt.seconds*1000): new Date());
-      let commission=(o.price*0.10).toFixed(1); let driverProfit=(o.price*0.90).toFixed(1);
+      let o=s.data(); let d=o.createdAt?.toDate ? o.createdAt.toDate() : new Date();
+      let commission=(o.price*0.10).toFixed(1);
       if(d.toDateString()===todayStr){ today++; profit+=parseFloat(commission); }
       if(o.status==='completed') done++;
-      let badge=o.status==='new'?'b-new':o.status==='accepted'?'b-accepted':o.status==='on_the_way'?'b-way':'b-done';
-      h+=`<div class="card" onclick="openTrip('${s.id}')"><b>${o.mouqataa} → ${o.destArea}</b> <span class="badge ${badge}">${o.status}</span><br><small>${o.name} - ${o.vehicle} - ${o.price} MRU</small><br>💰 عمولتك: ${commission} | للسائق: ${driverProfit}</div>`;
+      h+=`<div class="card" onclick="openTrip('${s.id}')"><b>${o.mouqataa} → ${o.destArea}</b><br>${o.name} - ${o.price} MRU - عمولتك: ${commission}</div>`;
     });
-    document.getElementById('ordersTab').innerHTML=h||"<div class='card'>لا يوجد طلبات</div>";
+    document.getElementById('ordersTab').innerHTML=h||"لا يوجد طلبات";
     document.getElementById('todayOrders').textContent=today;
     document.getElementById('todayProfit').textContent=profit.toFixed(1)+" MRU";
     document.getElementById('doneOrders').textContent=done;
@@ -134,7 +124,7 @@ function loadOrders(){
 }
 function loadDrivers(){
   onSnapshot(collection(db,"drivers"), snap=>{
-    let h=""; snap.forEach(d=>{let o=d.data(); h+=`<div class="card" style="display:flex;gap:10px"><img src="${o.photoBase64||''}" style="width:60px;height:60px;border-radius:50%"><div style="flex:1"><b>${o.name}</b><br>${o.phone}</div><div>${o.status!=='approved'?`<button class="btn btn-green" onclick="approve('${d.id}')">✅</button>`:''}<button class="btn btn-red" onclick="blockDriver('${d.id}')">حظر</button></div></div>`;});
+    let h=""; snap.forEach(d=>{let o=d.data(); h+=`<div class="card"><b>${o.name}</b> - ${o.phone} <button class="btn btn-green" onclick="approve('${d.id}')">✅</button><button class="btn btn-red" onclick="blockDriver('${d.id}')">حظر</button></div>`;});
     document.getElementById('driversTab').innerHTML=h;
   });
 }
@@ -142,18 +132,14 @@ window.approve=async(id)=>{ await updateDoc(doc(db,"drivers",id),{status:"approv
 window.blockDriver=async(id)=>{ await updateDoc(doc(db,"drivers",id),{status:"blocked"}); }
 window.openTrip=async(id)=>{
   let snap=await getDoc(doc(db,"requests",id)); let o=snap.data();
-  let comm=(o.price*0.10).toFixed(1), driverP=(o.price*0.90).toFixed(1);
-  let created=o.createdAt?.seconds? new Date(o.createdAt.seconds*1000).toLocaleString('ar'): '-';
   document.getElementById('tripDetails').classList.remove('hidden');
-  document.getElementById('tripDetails').innerHTML=`<h3>📋 ${o.mouqataa} → ${o.destArea}</h3>الزبون: ${o.name} - ${o.phone}<br>السائق: ${o.driverName||'-'}<br>السعر: ${o.price} | عمولتك: ${comm}<br>الطلب: ${created}<br><button class="btn btn-orange" onclick="showLive('${id}')">🗺️ تتبع حي</button>`;
+  document.getElementById('tripDetails').innerHTML=`<h3>${o.mouqataa} → ${o.destArea}</h3>${o.name} - ${o.price} MRU<br><button class="btn btn-orange" onclick="showLive('${id}')">تتبع حي</button>`;
   showLive(id);
 }
 window.showLive=async(id)=>{
   let snap=await getDoc(doc(db,"requests",id)); let o=snap.data();
   initTrackMap(o.customerLat||o.driverLat, o.customerLng||o.driverLng);
   if(liveUnsub) liveUnsub();
-  if(o.customerLat) custMarker=L.marker([o.customerLat,o.customerLng]).addTo(trackMap).bindPopup("📍 الزبون");
-  if(o.driverLat) driverMarker=L.marker([o.driverLat,o.driverLng]).addTo(trackMap).bindPopup("🚚 السائق");
   liveUnsub=onSnapshot(doc(db,"requests",id), s=>{
     let d=s.data(); if(!d.driverLat) return;
     if(driverMarker) trackMap.removeLayer(driverMarker);
