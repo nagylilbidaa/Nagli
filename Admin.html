@@ -1,56 +1,74 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نقلي - إدارة متكاملة</title>
+<title>نقلي - الإدارة الكاملة</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;font-family:Tajawal,Arial}
 body{background:#f0f2f5;margin:0;padding:12px}
-.header{background:#0a1931;color:#fff;padding:18px;text-align:center;border-radius:0 0 18px 18px;margin:-12px -12px 15px}
+.header{background:#0a1931;color:#fff;padding:18px;text-align:center;border-radius:0 0 18px 18px;margin:-12px -12px 15px -12px}
 .card{background:#fff;border-radius:14px;padding:16px;margin:10px 0;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.stat-card{background:#fff;border-radius:12px;padding:14px;text-align:center}
 .stat-num{font-size:22px;font-weight:bold;color:#27ae60}
-.btn{padding:10px 14px;border:0;border-radius:8px;font-weight:bold;cursor:pointer;margin:3px;display:inline-flex;align-items:center;gap:6px}
+.btn{padding:10px 14px;border:0;border-radius:8px;font-weight:bold;cursor:pointer;margin:3px;display:inline-flex;align-items:center;gap:5px}
 .btn-green{background:#27ae60;color:#fff}.btn-red{background:#e74c3c;color:#fff}.btn-blue{background:#1a73e8;color:#fff}.btn-orange{background:#ff9800;color:#fff}.btn-whats{background:#25D366;color:#fff}.btn-call{background:#0a1931;color:#fff}
-#adminMap{height:350px;border-radius:12px;border:2px solid #0a1931}
+#adminMap{height:400px;border-radius:12px;border:2px solid #0a1931}
 #trackMap{height:450px;border-radius:12px;border:2px solid #0a1931;margin-top:10px}
+.badge{padding:4px 10px;border-radius:20px;font-size:12px;color:#fff}
+.b-new{background:#3498db}.b-accepted{background:#f39c12}.b-way{background:#9b59b6}.b-done{background:#27ae60}
 .tabs{display:flex;gap:8px;margin:10px 0}
 .tab{flex:1;padding:12px;background:#eee;border:0;border-radius:10px;font-weight:bold;cursor:pointer}
 .tab.active{background:#0a1931;color:#fff}
 input,textarea{width:100%;padding:12px;border:1.5px solid #ddd;border-radius:10px;margin:6px 0}
-textarea{height:80px;resize:none}
+textarea{height:80px}
 .hidden{display:none}
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .info-box{background:#f8f9fa;padding:12px;border-radius:10px;border-right:4px solid #0a1931}
-.badge{padding:4px 10px;border-radius:20px;color:#fff;font-size:12px}
-.b-new{background:#3498db}.b-accepted{background:#f39c12}.b-way{background:#9b59b6}.b-done{background:#27ae60}
 </style>
 </head>
 <body>
 <div class="header"><h2 style="margin:0">👑 إدارة نقلي - تحكم كامل</h2></div>
 
 <div id="loginCard" class="card" style="max-width:400px;margin:30px auto">
-<h3 style="text-align:center">🔑 دخول الإدارة</h3>
-<input id="adminEmail" type="email" placeholder="البريد الإلكتروني">
-<input id="adminPass" type="password" placeholder="كلمة السر">
+<h3 style="text-align:center">🔑 دخول بالإيميل</h3>
+<input id="adminEmail" type="email" placeholder="email@example.com" style="direction:ltr;text-align:left">
+<input id="adminPass" type="password" placeholder="كلمة السر" style="direction:ltr;text-align:left">
 <button class="btn btn-blue" style="width:100%;justify-content:center" onclick="adminLogin()">دخول</button>
-<small id="loginError" style="color:red;text-align:center;display:block"></small>
+<small id="loginError" style="color:red;display:block;text-align:center;margin-top:8px"></small>
 </div>
 
 <div id="mainContent" class="hidden">
+<div class="stats">
+<div class="stat-card"><div>طلبات اليوم</div><div class="stat-num" id="todayOrders">0</div></div>
+<div class="stat-card"><div>أرباحك اليوم</div><div class="stat-num" id="todayProfit">0 MRU</div></div>
+<div class="stat-card"><div>مكتملة</div><div class="stat-num" id="doneOrders">0</div></div>
+</div>
+
+<div class="tabs">
+<button class="tab active" onclick="showTab('orders',this)">📦 الطلبات</button>
+<button class="tab" onclick="showTab('drivers',this)">🚕 السائقين</button>
+<button class="tab" onclick="showTab('map',this)">🗺️ الخريطة العامة</button>
+</div>
+
 <div id="ordersTab"></div>
+<div id="driversTab" style="display:none"></div>
+<div id="mapTab" style="display:none"><div class="card"><div id="adminMap"></div><p style="text-align:center;color:#666">كل السائقين المتصلين الآن</p></div></div>
+
 <div id="tripDetails" class="card hidden"></div>
 <div id="liveSection" class="hidden">
-<div class="card"><div id="trackMap"></div></div>
+<div class="card"><h3>🗺️ تتبع حي للرحلة</h3><div id="trackMap"></div><div id="liveInfo" style="margin-top:10px;font-weight:bold"></div></div>
 <div class="card">
-<h3>💬 إرسال رسالة للرحلة</h3>
-<textarea id="msgText" placeholder="اكتب رسالتك للسائق والزبون..."></textarea>
+<h3>💬 إرسال رسالة للسائق والزبون</h3>
+<textarea id="msgText" placeholder="اكتب رسالتك هنا وستصل فورا للطرفين..."></textarea>
 <button class="btn btn-blue" onclick="sendTripMessage()">📤 إرسال رسالة</button>
 <button class="btn" style="background:#eee" onclick="stopLive()">⏹️ إيقاف التتبع</button>
 </div>
 </div>
+
+<button class="btn" style="background:#eee;width:100%;margin-top:15px" onclick="logout()">🚪 خروج</button>
 </div>
 
 <script type="module">
@@ -58,70 +76,138 @@ import { db } from "./firebase.js";
 import { collection, doc, updateDoc, onSnapshot, query, orderBy, getDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-let trackMap, driverMarker, custMarker, routeLine, liveUnsub=null, currentTripId=null;
+let adminMap, trackMap, driverMarker=null, custMarker=null, routeLine=null, liveUnsub=null, currentTripId=null, allDriversMarkers=[];
 const auth=getAuth();
 
+// تسجيل دخول بالإيميل الذي أنشأته في Authentication
 window.adminLogin=async()=>{
-  try{ await signInWithEmailAndPassword(auth, adminEmail.value.trim(), adminPass.value.trim());
-    loginCard.classList.add('hidden'); mainContent.classList.remove('hidden'); loadOrders();
-  }catch(e){ loginError.innerText=e.message; }
+  let email=document.getElementById('adminEmail').value.trim();
+  let pass=document.getElementById('adminPass').value.trim();
+  document.getElementById('loginError').innerText="";
+  if(!email||!pass) return alert("أدخل الإيميل والباسورد");
+  try{
+    await signInWithEmailAndPassword(auth,email,pass);
+    document.getElementById('loginCard').classList.add('hidden');
+    document.getElementById('mainContent').classList.remove('hidden');
+    initAdminMap(); loadOrders(); loadDrivers();
+  }catch(e){
+    document.getElementById('loginError').innerText="خطأ: "+e.code;
+  }
 }
 window.logout=async()=>{ await signOut(auth); location.reload(); }
 
-function loadOrders(){
-  onSnapshot(query(collection(db,"requests"), orderBy("createdAt","desc")), snap=>{
-    let h=""; snap.forEach(s=>{
-      let o=s.data();
-      let st=o.status==="new"?"b-new":o.status==="accepted"?"b-accepted":o.status==="onway"?"b-way":"b-done";
-      h+=`<div class="card" onclick="openTrip('${s.id}')" style="cursor:pointer">
-        <span class="badge ${st}">${o.status||'new'}</span>
-        <b>${o.mouqataa||''} → ${o.destArea||''}</b><br>
-        👤 ${o.name||'زبون'} | 💰 ${o.price||0} MRU | عمولتك: ${(o.price*0.1).toFixed(0)}
-      </div>`;
+window.showTab=(t,el)=>{
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('ordersTab').style.display=t==='orders'?'block':'none';
+  document.getElementById('driversTab').style.display=t==='drivers'?'block':'none';
+  document.getElementById('mapTab').style.display=t==='map'?'block':'none';
+  if(el) el.classList.add('active');
+  if(t==='map' && adminMap) setTimeout(()=>adminMap.invalidateSize(),300);
+}
+
+function initAdminMap(){
+  if(adminMap) return;
+  adminMap=L.map('adminMap').setView([18.0735,-15.9582],12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMap);
+  // عرض كل السائقين على الخريطة العامة
+  onSnapshot(collection(db,"drivers"), snap=>{
+    allDriversMarkers.forEach(m=>adminMap.removeLayer(m)); allDriversMarkers=[];
+    snap.forEach(d=>{
+      let o=d.data();
+      if(o.lat && o.lng){
+        let m=L.marker([o.lat,o.lng]).addTo(adminMap).bindPopup(`${o.name}<br>${o.phone}`);
+        allDriversMarkers.push(m);
+      }
     });
-    ordersTab.innerHTML=h||"لا يوجد طلبات";
   });
 }
+
+function initTrackMap(lat,lng){
+  document.getElementById('liveSection').classList.remove('hidden');
+  document.getElementById('trackMap').innerHTML="";
+  if(trackMap){ trackMap.remove(); trackMap=null; }
+  trackMap=L.map('trackMap').setView([lat||18.0735,lng||-15.9582],14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
+  setTimeout(()=>trackMap.invalidateSize(),400);
+}
+
+function loadOrders(){
+  onSnapshot(query(collection(db,"requests"), orderBy("createdAt","desc")), snap=>{
+    let h="", today=0, profit=0, done=0; let todayStr=new Date().toDateString();
+    snap.forEach(s=>{
+      let o=s.data(); let d=o.createdAt?.toDate ? o.createdAt.toDate() : new Date();
+      let commission=(o.price*0.10).toFixed(1);
+      if(d.toDateString()===todayStr){ today++; profit+=parseFloat(commission); }
+      if(o.status==='completed') done++;
+      let st=o.status==='new'?'b-new':o.status==='accepted'?'b-accepted':o.status==='onway'?'b-way':'b-done';
+      h+=`<div class="card" onclick="openTrip('${s.id}')" style="cursor:pointer"><span class="badge ${st}">${o.status||'new'}</span> <b>${o.mouqataa||''} → ${o.destArea||''}</b><br>${o.name||'زبون'} - ${o.price||0} MRU - عمولتك: ${commission}</div>`;
+    });
+    document.getElementById('ordersTab').innerHTML=h||"لا يوجد طلبات";
+    document.getElementById('todayOrders').textContent=today;
+    document.getElementById('todayProfit').textContent=profit.toFixed(1)+" MRU";
+    document.getElementById('doneOrders').textContent=done;
+  });
+}
+
+function loadDrivers(){
+  onSnapshot(collection(db,"drivers"), snap=>{
+    let h=""; snap.forEach(d=>{
+      let o=d.data();
+      h+=`<div class="card"><b>${o.name}</b> - ${o.phone} - ${o.status||''}<br>
+      ${o.carType||''} ${o.plate||''}<br>
+      <button class="btn btn-green" onclick="approve('${d.id}')">✅ قبول</button>
+      <button class="btn btn-red" onclick="blockDriver('${d.id}')">🚫 حظر</button>
+      <button class="btn btn-call" onclick="callNum('${o.phone}')">📞</button>
+      <button class="btn btn-whats" onclick="whats('${o.phone}')">💬</button>
+      </div>`;
+    });
+    document.getElementById('driversTab').innerHTML=h||"لا يوجد سائقين";
+  });
+}
+
+window.approve=async(id)=>{ await updateDoc(doc(db,"drivers",id),{status:"approved"}); }
+window.blockDriver=async(id)=>{ await updateDoc(doc(db,"drivers",id),{status:"blocked"}); }
+window.callNum=(num)=>{ window.open(`tel:${num}`); }
+window.whats=(num)=>{ let c=num.replace(/[^0-9]/g,''); if(c.startsWith('0')) c='222'+c.substring(1); window.open(`https://wa.me/${c}`,'_blank'); }
 
 window.openTrip=async(id)=>{
   currentTripId=id;
   let snap=await getDoc(doc(db,"requests",id)); let o=snap.data();
-  let driver = o.driverId ? (await getDoc(doc(db,"drivers",o.driverId))).data() : null;
+  let driver=null;
+  if(o.driverId){ try{ driver=(await getDoc(doc(db,"drivers",o.driverId))).data(); }catch(e){} }
   
-  tripDetails.classList.remove('hidden');
-  tripDetails.innerHTML=`
-  <h2 style="margin:0 0 10px">📦 تفاصيل الرحلة #${id.slice(0,6)}</h2>
-  <span class="badge ${o.status==='new'?'b-new':o.status==='accepted'?'b-accepted':o.status==='onway'?'b-way':'b-done'}">${o.status}</span>
-  
-  <div class="info-grid" style="margin-top:12px">
-    <div class="info-box">
-      <b>👤 الزبون</b><br>
-      الاسم: ${o.name||'-'}<br>
-      الهاتف: ${o.phone||'-'}<br>
-      من: ${o.mouqataa||'-'}<br>
-      إلى: ${o.destArea||o.destination||'-'}<br>
-      السعر: ${o.price} MRU<br>
-      <button class="btn btn-call" onclick="callNum('${o.phone}')">📞 اتصال</button>
-      <button class="btn btn-whats" onclick="whats('${o.phone}')">💬 واتساب</button>
+  document.getElementById('tripDetails').classList.remove('hidden');
+  document.getElementById('tripDetails').innerHTML=`
+    <h3>📦 تفاصيل الرحلة #${id.slice(0,6)} - <span class="badge ${o.status==='new'?'b-new':o.status==='accepted'?'b-accepted':o.status==='onway'?'b-way':'b-done'}">${o.status}</span></h3>
+    <div class="info-grid">
+      <div class="info-box">
+        <b>👤 الزبون</b><br>
+        الاسم: ${o.name||'-'}<br>
+        الهاتف: ${o.phone||'-'}<br>
+        من: ${o.mouqataa||'-'}<br>
+        إلى: ${o.destArea||o.destination||'-'}<br>
+        السعر: ${o.price} MRU<br>
+        <button class="btn btn-call" onclick="callNum('${o.phone}')">📞 اتصال بالزبون</button>
+        <button class="btn btn-whats" onclick="whats('${o.phone}')">💬 واتساب زبون</button>
+      </div>
+      <div class="info-box" style="border-right-color:#27ae60">
+        <b>🚕 السائق</b><br>
+        ${driver?`
+          الاسم: ${driver.name}<br>
+          الهاتف: ${driver.phone}<br>
+          السيارة: ${driver.carType||'-'}<br>
+          اللوحة: ${driver.plate||'-'}<br>
+          الحالة: ${driver.status}<br>
+          <button class="btn btn-call" onclick="callNum('${driver.phone}')">📞 اتصال بالسائق</button>
+          <button class="btn btn-whats" onclick="whats('${driver.phone}')">💬 واتساب سائق</button>
+        `:'<i>لم يتم قبول الرحلة بعد - لا يوجد سائق</i>'}
+      </div>
     </div>
-    <div class="info-box" style="border-right-color:#27ae60">
-      <b>🚕 السائق</b><br>
-      ${driver?`
-        الاسم: ${driver.name}<br>
-        الهاتف: ${driver.phone}<br>
-        السيارة: ${driver.carType||'-'} - ${driver.plate||''}<br>
-        الحالة: ${driver.status}<br>
-        <button class="btn btn-call" onclick="callNum('${driver.phone}')">📞 اتصال</button>
-        <button class="btn btn-whats" onclick="whats('${driver.phone}')">💬 واتساب</button>
-      `:'لم يتم قبول الرحلة بعد'}
+    <div style="margin-top:12px">
+      <button class="btn btn-orange" onclick="showLive('${id}')">🗺️ تتبع حي + مسار</button>
+      <button class="btn btn-green" onclick="completeTrip('${id}')">✅ إنهاء</button>
+      <button class="btn btn-red" onclick="cancelTrip('${id}')">❌ إلغاء</button>
     </div>
-  </div>
-
-  <div style="margin-top:12px">
-    <button class="btn btn-orange" onclick="showLive('${id}')">🗺️ تتبع حي + مسار</button>
-    <button class="btn btn-green" onclick="completeTrip('${id}')">✅ إنهاء الرحلة</button>
-    <button class="btn btn-red" onclick="cancelTrip('${id}')">❌ إلغاء</button>
-  </div>
   `;
   showLive(id);
 }
@@ -129,53 +215,41 @@ window.openTrip=async(id)=>{
 window.showLive=async(id)=>{
   currentTripId=id;
   let snap=await getDoc(doc(db,"requests",id)); let o=snap.data();
-  liveSection.classList.remove('hidden');
-  document.getElementById('trackMap').innerHTML="";
-  if(trackMap){ trackMap.remove(); trackMap=null; }
+  initTrackMap(o.customerLat||o.driverLat, o.customerLng||o.driverLng);
   
-  trackMap=L.map('trackMap').setView([o.customerLat||18.0735, o.customerLng||-15.9582],13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
-  setTimeout(()=>trackMap.invalidateSize(),300);
-
-  if(o.customerLat) custMarker=L.marker([o.customerLat,o.customerLng],{icon:L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/149/149060.png',iconSize:[32,32]})}).addTo(trackMap).bindPopup("الزبون");
+  if(o.customerLat){
+    if(custMarker) trackMap.removeLayer(custMarker);
+    custMarker=L.marker([o.customerLat,o.customerLng],{icon:L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/149/149060.png',iconSize:[32,32]})}).addTo(trackMap).bindPopup("📍 الزبون");
+  }
   
   if(liveUnsub) liveUnsub();
   liveUnsub=onSnapshot(doc(db,"requests",id), s=>{
-    let d=s.data();
-    if(!d.driverLat) return;
+    let d=s.data(); if(!d.driverLat) { document.getElementById('liveInfo').innerText="بانتظار موقع السائق..."; return; }
     if(driverMarker) trackMap.removeLayer(driverMarker);
-    driverMarker=L.marker([d.driverLat,d.driverLng],{icon:L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/3448/3448609.png',iconSize:[38,38]})}).addTo(trackMap).bindPopup(`السائق: ${d.driverName||''}<br>السرعة: ${d.speed||0} كم/س`);
+    driverMarker=L.marker([d.driverLat,d.driverLng],{icon:L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/3448/3448609.png',iconSize:[38,38]})}).addTo(trackMap);
     
     if(d.customerLat && d.driverLat){
       if(routeLine) trackMap.removeLayer(routeLine);
       routeLine=L.polyline([[d.customerLat,d.customerLng],[d.driverLat,d.driverLng]],{color:'#0a1931',dashArray:'8,8',weight:4}).addTo(trackMap);
       let dist=trackMap.distance([d.customerLat,d.customerLng],[d.driverLat,d.driverLng]);
-      driverMarker.bindPopup(`المسافة للزبون: ${(dist/1000).toFixed(2)} كم`).openPopup();
+      let distKm=(dist/1000).toFixed(2);
+      document.getElementById('liveInfo').innerHTML=`📏 المسافة بين السائق والزبون: ${distKm} كم | 🚗 السرعة: ${d.speed||0} كم/س | آخر تحديث: ${new Date().toLocaleTimeString()}`;
+      driverMarker.bindPopup(`السائق ${distKm} كم من الزبون`).openPopup();
     }
   });
 }
 
-window.callNum=(num)=>{ window.open(`tel:${num}`); }
-window.whats=(num)=>{ 
-  let clean=num.replace(/[^0-9]/g,''); 
-  if(clean.startsWith('0')) clean='222'+clean.substring(1);
-  window.open(`https://wa.me/${clean}`,'_blank'); 
-}
-
 window.sendTripMessage=async()=>{
   let txt=document.getElementById('msgText').value.trim();
-  if(!txt||!currentTripId) return alert("اكتب رسالة");
-  await addDoc(collection(db,"requests",currentTripId,"messages"),{
-    text: txt, from: "admin", createdAt: serverTimestamp()
-  });
-  await updateDoc(doc(db,"requests",currentTripId),{ lastAdminMessage: txt, lastMessageAt: serverTimestamp() });
-  alert("تم إرسال الرسالة للسائق والزبون ✅");
+  if(!txt||!currentTripId) return alert("اكتب رسالة وافتح رحلة");
+  await addDoc(collection(db,"requests",currentTripId,"messages"),{ text:txt, from:"admin", createdAt:serverTimestamp() });
+  await updateDoc(doc(db,"requests",currentTripId),{ lastAdminMessage:txt, lastMessageAt:serverTimestamp() });
+  alert("✅ تم إرسال الرسالة وستظهر للسائق والزبون فورا");
   document.getElementById('msgText').value="";
 }
-
 window.completeTrip=async(id)=>{ if(confirm("إنهاء الرحلة؟")) await updateDoc(doc(db,"requests",id),{status:"completed"}); }
 window.cancelTrip=async(id)=>{ if(confirm("إلغاء الرحلة؟")) await updateDoc(doc(db,"requests",id),{status:"cancelled"}); }
-window.stopLive=()=>{ if(liveUnsub) liveUnsub(); liveSection.classList.add('hidden'); }
+window.stopLive=()=>{ if(liveUnsub) liveUnsub(); document.getElementById('liveSection').classList.add('hidden'); }
 </script>
 </body>
 </html>
