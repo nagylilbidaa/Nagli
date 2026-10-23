@@ -19,6 +19,7 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-
 .btn{width:100%;padding:14px;background:#27ae60;color:#fff;border:0;border-radius:12px;font-size:18px;font-weight:bold;cursor:pointer;margin-top:8px}
 .btn-call-top{background:#0a3d62;text-decoration:none;display:block;text-align:center}
 .btn-cancel{background:#e74c3c}
+.btn-gps{background:#1a73e8}
 .label{font-weight:bold;margin-top:8px;display:block;color:#333}
 .vehicles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
 .v-card{padding:14px;border-radius:12px;border:2px solid #eee;cursor:pointer;text-align:center}
@@ -82,9 +83,10 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-
 </div>
 
 <div class="card" id="mapCard">
-<label class="label">📍 حدد موقعك على الخريطة *</label>
+<label class="label">📍 موقعك (سيتحدد تلقائيا بعد تشغيل GPS)</label>
 <div id="map"></div>
-<p id="mapStatus" style="color:#27ae60;text-align:center;font-weight:bold">⏳ جاري تحديد موقعك تلقائيا...</p>
+<p id="mapStatus" style="text-align:center;font-weight:bold;color:#1a73e8">⏳ جاري طلب الإذن لتحديد موقعك...</p>
+<button class="btn btn-gps" id="retryBtn" style="display:none" onclick="requestLocation()">📡 شغلت الـ GPS؟ اضغط هنا لتحديد موقعي الآن</button>
 </div>
 
 <button class="btn" id="sendBtn">✅ إرسال الطلب الآن</button>
@@ -119,42 +121,66 @@ function calcPrice(){
 
 function initMap(){
   map=L.map('map').setView([18.0735,-15.9582],12);
-  L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{attribution:'© Google Maps'}).addTo(map);
-  
-  // تحديد تلقائي بدون ضغط
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(pos=>{
-      let p=L.latLng(pos.coords.latitude, pos.coords.longitude);
-      userLatLng=p;
-      if(marker) map.removeLayer(marker);
-      marker=L.marker(p,{draggable:true}).addTo(map).bindPopup("📍 موقعك الحالي").openPopup();
-      map.setView(p,16);
-      mapStatus.textContent="✅ تم تحديد موقعك تلقائيا";
-      mapStatus.style.color="green";
-      calcPrice();
-      marker.on('dragend', e=>{
-        userLatLng=e.target.getLatLng();
-        mapStatus.textContent="✅ تم تعديل الموقع";
-        calcPrice();
-      });
-    }, err=>{
-      mapStatus.textContent="❌ فعل GPS ثم اضغط على الخريطة لتحديد موقعك";
-      mapStatus.style.color="red";
-    }, {enableHighAccuracy:true, timeout:10000});
-
-    map.on('click',e=>{
-      userLatLng=e.latlng;
-      if(marker) map.removeLayer(marker);
-      marker=L.marker(e.latlng,{draggable:true}).addTo(map).bindPopup("موقع الاستلام").openPopup();
-      marker.on('dragend', ev=>{ userLatLng=ev.target.getLatLng(); calcPrice(); });
-      mapStatus.textContent="✅ تم تحديد الموقع";
-      mapStatus.style.color="green";
-      calcPrice();
-    });
-  }
+  L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+    maxZoom:20,
+    subdomains:['mt0','mt1','mt2','mt3'],
+    attribution:'© Google Maps'
+  }).addTo(map);
+  map.on('click',e=>{
+    userLatLng=e.latlng;
+    if(marker) map.removeLayer(marker);
+    marker=L.marker(e.latlng,{draggable:true}).addTo(map).bindPopup("موقع الاستلام").openPopup();
+    marker.on('dragend', ev=>{ userLatLng=ev.target.getLatLng(); calcPrice(); });
+    mapStatus.textContent="✅ تم تحديد الموقع يدويا";
+    mapStatus.style.color="green";
+    retryBtn.style.display="none";
+    calcPrice();
+  });
   setTimeout(()=>map.invalidateSize(),800);
   if(currentOrderId) startListening(currentOrderId);
+  // طلب الموقع فور فتح الصفحة
+  setTimeout(requestLocation,1000);
 }
+
+window.requestLocation=()=>{
+  let statusEl=document.getElementById('mapStatus');
+  let btn=document.getElementById('retryBtn');
+  if(!navigator.geolocation){
+    statusEl.textContent="❌ هاتفك لا يدعم تحديد الموقع";
+    statusEl.style.color="red";
+    return;
+  }
+  statusEl.textContent="⏳ جاري تحديد موقعك... يرجى تشغيل GPS والسماح للمتصفح";
+  statusEl.style.color="#1a73e8";
+  btn.style.display="none";
+  
+  navigator.geolocation.getCurrentPosition(pos=>{
+    let lat=pos.coords.latitude;
+    let lng=pos.coords.longitude;
+    userLatLng=L.latLng(lat,lng);
+    if(marker) map.removeLayer(marker);
+    marker=L.marker([lat,lng],{draggable:true}).addTo(map).bindPopup("📍 أنت هنا").openPopup();
+    map.setView([lat,lng],17);
+    statusEl.textContent="✅ تم تحديد موقعك تلقائيا";
+    statusEl.style.color="green";
+    calcPrice();
+    marker.on('dragend', e=>{
+      userLatLng=e.target.getLatLng();
+      calcPrice();
+    });
+  }, err=>{
+    if(err.code===1){
+      statusEl.innerHTML="❌ رفضت السماح بالموقع<br><small>شغل الـ GPS في هاتفك واسمح للمتصفح ثم اضغط الزر بالأسفل</small>";
+    }else if(err.code===2){
+      statusEl.innerHTML="❌ الـ GPS غير شغال في هاتفك<br><small>شغل الموقع من شريط الإشعارات العلوي ثم اضغط الزر</small>";
+    }else{
+      statusEl.innerHTML="❌ لم نستطع تحديد موقعك<br><small>تأكد أنك شغلت الـ GPS</small>";
+    }
+    statusEl.style.color="red";
+    btn.style.display="block";
+  }, {enableHighAccuracy:true, timeout:15000, maximumAge:0});
+}
+
 function initTrackMap(){ if(trackMap) return; trackMap=L.map('trackMap').setView([18.0735,-15.9582],13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap); }
 
 window.addEventListener('load',initMap);
