@@ -84,7 +84,7 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-
 <div class="card" id="mapCard">
 <label class="label">📍 حدد موقعك على الخريطة *</label>
 <div id="map"></div>
-<p id="mapStatus" style="color:red;text-align:center">اضغط على الخريطة لتحديد موقعك</p>
+<p id="mapStatus" style="color:#27ae60;text-align:center;font-weight:bold">⏳ جاري تحديد موقعك تلقائيا...</p>
 </div>
 
 <button class="btn" id="sendBtn">✅ إرسال الطلب الآن</button>
@@ -119,15 +119,39 @@ function calcPrice(){
 
 function initMap(){
   map=L.map('map').setView([18.0735,-15.9582],12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-  map.on('click',e=>{
-    userLatLng=e.latlng;
-    if(marker) map.removeLayer(marker);
-    marker=L.marker(e.latlng).addTo(map).bindPopup("موقع الاستلام").openPopup();
-    mapStatus.textContent="✅ تم تحديد الموقع";
-    mapStatus.style.color="green";
-    calcPrice();
-  });
+  L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{attribution:'© Google Maps'}).addTo(map);
+  
+  // تحديد تلقائي بدون ضغط
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      let p=L.latLng(pos.coords.latitude, pos.coords.longitude);
+      userLatLng=p;
+      if(marker) map.removeLayer(marker);
+      marker=L.marker(p,{draggable:true}).addTo(map).bindPopup("📍 موقعك الحالي").openPopup();
+      map.setView(p,16);
+      mapStatus.textContent="✅ تم تحديد موقعك تلقائيا";
+      mapStatus.style.color="green";
+      calcPrice();
+      marker.on('dragend', e=>{
+        userLatLng=e.target.getLatLng();
+        mapStatus.textContent="✅ تم تعديل الموقع";
+        calcPrice();
+      });
+    }, err=>{
+      mapStatus.textContent="❌ فعل GPS ثم اضغط على الخريطة لتحديد موقعك";
+      mapStatus.style.color="red";
+    }, {enableHighAccuracy:true, timeout:10000});
+
+    map.on('click',e=>{
+      userLatLng=e.latlng;
+      if(marker) map.removeLayer(marker);
+      marker=L.marker(e.latlng,{draggable:true}).addTo(map).bindPopup("موقع الاستلام").openPopup();
+      marker.on('dragend', ev=>{ userLatLng=ev.target.getLatLng(); calcPrice(); });
+      mapStatus.textContent="✅ تم تحديد الموقع";
+      mapStatus.style.color="green";
+      calcPrice();
+    });
+  }
   setTimeout(()=>map.invalidateSize(),800);
   if(currentOrderId) startListening(currentOrderId);
 }
