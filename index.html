@@ -35,7 +35,6 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-
 </style>
 </head>
 <body>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js')})}</script>
 
 <div id="loginOverlay">
   <div class="card" style="width:100%;max-width:380px;text-align:center">
@@ -79,14 +78,13 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-
 <input id="pickArea" placeholder="الحي / قرب...">
 <label class="label">المنطقة المتوجه إليها *</label><input id="destArea" placeholder="نواذيبو - كيفة...">
 <div class="price" id="priceBox">💰 مبلغ الرحلة: 150 MRU جديدة - واوا</div>
-<p style="font-size:12px;color:#888;text-align:center">يضاف 5 MRU لكل كم حسب موقعك على الخريطة</p>
 </div>
 
 <div class="card" id="mapCard">
-<label class="label">📍 موقعك (سيتحدد تلقائيا بعد تشغيل GPS)</label>
+<label class="label">📍 موقعك (سيتحدد تلقائيا)</label>
 <div id="map"></div>
-<p id="mapStatus" style="text-align:center;font-weight:bold;color:#1a73e8">⏳ جاري طلب الإذن لتحديد موقعك...</p>
-<button class="btn btn-gps" id="retryBtn" style="display:none" onclick="requestLocation()">📡 شغلت الـ GPS؟ اضغط هنا لتحديد موقعي الآن</button>
+<p id="mapStatus" style="text-align:center;font-weight:bold;color:#1a73e8">⏳ جاري طلب الإذن...</p>
+<button class="btn btn-gps" id="retryBtn" style="display:none" onclick="requestLocation()">📡 شغلت الـ GPS؟ اضغط هنا</button>
 </div>
 
 <button class="btn" id="sendBtn">✅ إرسال الطلب الآن</button>
@@ -94,8 +92,8 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-
 <div id="msg"></div>
 
 <script>
-function doLogin(){let n=loginName.value.trim(),p=loginPhone.value.trim();if(n.length<3)return alert('أدخل الاسم');if(p.length<8)return alert('رقم خاطئ');localStorage.setItem('naqli_name',n);localStorage.setItem('naqli_phone',p);loginOverlay.style.display='none';cName.value=n;cPhone.value=p;}
-(function(){let a=localStorage.getItem('naqli_name'),b=localStorage.getItem('naqli_phone');if(a&&b)loginOverlay.style.display='none';})();
+function doLogin(){let n=document.getElementById('loginName').value.trim(),p=document.getElementById('loginPhone').value.trim();if(n.length<3)return alert('أدخل الاسم');if(p.length<8)return alert('رقم خاطئ');localStorage.setItem('naqli_name',n);localStorage.setItem('naqli_phone',p);document.getElementById('loginOverlay').style.display='none';document.getElementById('cName').value=n;document.getElementById('cPhone').value=p;}
+(function(){let a=localStorage.getItem('naqli_name'),b=localStorage.getItem('naqli_phone');if(a&&b)document.getElementById('loginOverlay').style.display='none';})();
 </script>
 
 <script type="module">
@@ -106,7 +104,22 @@ const prices={"تاكسي":100,"واوا":150,"شاحنة متوسطة 3 طن":6
 let selVehicle="واوا", userLatLng=null, lastId=localStorage.getItem('naqli_lastId'), currentOrderId=lastId;
 let map, marker, trackMap, driverMarker, customerMarker, unsub=null, currentDriverPos=null;
 
-document.querySelectorAll('.v-card').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.v-card').forEach(x=>x.classList.remove('selected'));c.classList.add('selected');selVehicle=c.dataset.v;calcPrice();}));
+const priceBoxEl = document.getElementById('priceBox');
+const mapStatusEl = document.getElementById('mapStatus');
+const retryBtnEl = document.getElementById('retryBtn');
+const msgEl = document.getElementById('msg');
+const cNameEl = document.getElementById('cName');
+const cPhoneEl = document.getElementById('cPhone');
+const gTypeEl = document.getElementById('gType');
+const gDescEl = document.getElementById('gDesc');
+const pickMEl = document.getElementById('pickM');
+const pickAreaEl = document.getElementById('pickArea');
+const destAreaEl = document.getElementById('destArea');
+
+document.querySelectorAll('.v-card').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.v-card').forEach(x=>x.classList.remove('selected'));
+  c.classList.add('selected');selVehicle=c.dataset.v;calcPrice();
+}));
 
 function calcPrice(){
   let base=prices[selVehicle], extra=0;
@@ -115,7 +128,7 @@ function calcPrice(){
     extra=Math.round(dist*5);
   }
   let total=base+extra;
-  priceBox.textContent=`💰 مبلغ الرحلة: ${total} MRU جديدة - ${selVehicle} ${extra?`(+${extra} مسافة)`:''}`;
+  priceBoxEl.textContent=`💰 مبلغ الرحلة: ${total} MRU - ${selVehicle} ${extra?`(+${extra} مسافة)`:''}`;
   return total;
 }
 
@@ -131,28 +144,25 @@ function initMap(){
     if(marker) map.removeLayer(marker);
     marker=L.marker(e.latlng,{draggable:true}).addTo(map).bindPopup("موقع الاستلام").openPopup();
     marker.on('dragend', ev=>{ userLatLng=ev.target.getLatLng(); calcPrice(); });
-    mapStatus.textContent="✅ تم تحديد الموقع يدويا";
-    mapStatus.style.color="green";
-    retryBtn.style.display="none";
+    mapStatusEl.textContent="✅ تم تحديد الموقع يدويا";
+    mapStatusEl.style.color="green";
+    retryBtnEl.style.display="none";
     calcPrice();
   });
   setTimeout(()=>map.invalidateSize(),800);
   if(currentOrderId) startListening(currentOrderId);
-  // طلب الموقع فور فتح الصفحة
-  setTimeout(requestLocation,1000);
+  setTimeout(()=>window.requestLocation(),1200);
 }
 
 window.requestLocation=()=>{
-  let statusEl=document.getElementById('mapStatus');
-  let btn=document.getElementById('retryBtn');
   if(!navigator.geolocation){
-    statusEl.textContent="❌ هاتفك لا يدعم تحديد الموقع";
-    statusEl.style.color="red";
+    mapStatusEl.textContent="❌ هاتفك لا يدعم تحديد الموقع";
+    mapStatusEl.style.color="red";
     return;
   }
-  statusEl.textContent="⏳ جاري تحديد موقعك... يرجى تشغيل GPS والسماح للمتصفح";
-  statusEl.style.color="#1a73e8";
-  btn.style.display="none";
+  mapStatusEl.textContent="⏳ جاري تحديد موقعك... شغل GPS واسمح للمتصفح";
+  mapStatusEl.style.color="#1a73e8";
+  retryBtnEl.style.display="none";
   
   navigator.geolocation.getCurrentPosition(pos=>{
     let lat=pos.coords.latitude;
@@ -161,69 +171,73 @@ window.requestLocation=()=>{
     if(marker) map.removeLayer(marker);
     marker=L.marker([lat,lng],{draggable:true}).addTo(map).bindPopup("📍 أنت هنا").openPopup();
     map.setView([lat,lng],17);
-    statusEl.textContent="✅ تم تحديد موقعك تلقائيا";
-    statusEl.style.color="green";
+    mapStatusEl.textContent="✅ تم تحديد موقعك تلقائيا";
+    mapStatusEl.style.color="green";
     calcPrice();
-    marker.on('dragend', e=>{
-      userLatLng=e.target.getLatLng();
-      calcPrice();
-    });
+    marker.on('dragend', e=>{ userLatLng=e.target.getLatLng(); calcPrice(); });
   }, err=>{
     if(err.code===1){
-      statusEl.innerHTML="❌ رفضت السماح بالموقع<br><small>شغل الـ GPS في هاتفك واسمح للمتصفح ثم اضغط الزر بالأسفل</small>";
+      mapStatusEl.innerHTML="❌ رفضت السماح بالموقع - شغل GPS واسمح ثم اضغط الزر";
     }else if(err.code===2){
-      statusEl.innerHTML="❌ الـ GPS غير شغال في هاتفك<br><small>شغل الموقع من شريط الإشعارات العلوي ثم اضغط الزر</small>";
+      mapStatusEl.innerHTML="❌ GPS مطفي - شغله من الأعلى ثم اضغط الزر";
     }else{
-      statusEl.innerHTML="❌ لم نستطع تحديد موقعك<br><small>تأكد أنك شغلت الـ GPS</small>";
+      mapStatusEl.innerHTML="❌ فشل التحديد - اضغط الزر مرة أخرى";
     }
-    statusEl.style.color="red";
-    btn.style.display="block";
+    mapStatusEl.style.color="red";
+    retryBtnEl.style.display="block";
   }, {enableHighAccuracy:true, timeout:15000, maximumAge:0});
 }
 
 function initTrackMap(){ if(trackMap) return; trackMap=L.map('trackMap').setView([18.0735,-15.9582],13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap); }
 
 window.addEventListener('load',initMap);
-cName.value=localStorage.getItem('naqli_name')||""; cPhone.value=localStorage.getItem('naqli_phone')||"";
-if(lastId) cancelBtn.style.display="block";
+cNameEl.value=localStorage.getItem('naqli_name')||""; 
+cPhoneEl.value=localStorage.getItem('naqli_phone')||"";
+if(lastId) document.getElementById('cancelBtn').style.display="block";
 
-sendBtn.onclick=async()=>{
+document.getElementById('sendBtn').onclick=async()=>{
   let finalPrice=calcPrice();
-  let data={name:cName.value.trim(),phone:cPhone.value.trim(),vehicle:selVehicle,goodsType:gType.value,goodsDesc:gDesc.value.trim(),mouqataa:pickM.value,pickArea:pickArea.value.trim(),destArea:destArea.value.trim(),price:finalPrice,customerLat:userLatLng?.lat,customerLng:userLatLng?.lng,lat:userLatLng?.lat,lng:userLatLng?.lng,status:"new",progress:10,createdAt:new Date()};
+  let data={name:cNameEl.value.trim(),phone:cPhoneEl.value.trim(),vehicle:selVehicle,goodsType:gTypeEl.value,goodsDesc:gDescEl.value.trim(),mouqataa:pickMEl.value,pickArea:pickAreaEl.value.trim(),destArea:destAreaEl.value.trim(),price:finalPrice,customerLat:userLatLng?.lat,customerLng:userLatLng?.lng,lat:userLatLng?.lat,lng:userLatLng?.lng,status:"new",progress:10,createdAt:new Date()};
   if(!data.name||!data.phone||!data.goodsDesc||!data.mouqataa||!data.destArea||!userLatLng) return alert("أكمل البيانات وحدد موقعك على الخريطة");
   localStorage.setItem('naqli_name',data.name); localStorage.setItem('naqli_phone',data.phone);
-  msg.textContent="⏳ جاري الإرسال...";
+  msgEl.textContent="⏳ جاري الإرسال...";
   try{
     let ref=await addDoc(collection(db,"requests"),data);
     lastId=ref.id; currentOrderId=ref.id; localStorage.setItem('naqli_lastId',lastId);
-    msg.innerHTML=`<div style="background:#e8f5e9;padding:14px;border-radius:12px">✅ تم الإرسال! جاري البحث عن سائق...</div>`;
-    cancelBtn.style.display="block"; orderForm.style.display='none'; mapCard.style.display='none'; sendBtn.style.display='none';
+    msgEl.innerHTML=`<div style="background:#e8f5e9;padding:14px;border-radius:12px">✅ تم الإرسال!</div>`;
+    document.getElementById('cancelBtn').style.display="block"; 
+    document.getElementById('orderForm').style.display='none'; 
+    document.getElementById('mapCard').style.display='none'; 
+    document.getElementById('sendBtn').style.display='none';
     startListening(ref.id);
-  }catch(e){ msg.textContent="خطأ: "+e.message; }
+  }catch(e){ msgEl.textContent="خطأ: "+e.message; }
 };
 
-cancelBtn.onclick=async()=>{
+document.getElementById('cancelBtn').onclick=async()=>{
   let id=currentOrderId||localStorage.getItem('naqli_lastId'); if(!id) return;
   if(!confirm("إلغاء الطلب؟")) return;
   await deleteDoc(doc(db,"requests",id));
-  msg.innerHTML=`<div style="background:#ffebee;padding:10px;border-radius:10px">❌ تم الإلغاء</div>`;
-  cancelBtn.style.display="none"; localStorage.removeItem('naqli_lastId'); currentOrderId=null; if(unsub) unsub(); location.reload();
+  msgEl.innerHTML=`<div style="background:#ffebee;padding:10px;border-radius:10px">❌ تم الإلغاء</div>`;
+  document.getElementById('cancelBtn').style.display="none"; localStorage.removeItem('naqli_lastId'); currentOrderId=null; if(unsub) unsub(); location.reload();
 };
 
 function startListening(orderId){
-  liveStatus.style.display='block'; trackMap.style.display='block'; initTrackMap(); setTimeout(()=>trackMap.invalidateSize(),500);
+  document.getElementById('liveStatus').style.display='block'; 
+  document.getElementById('trackMap').style.display='block'; 
+  initTrackMap(); setTimeout(()=>trackMap.invalidateSize(),500);
   if(unsub) unsub();
   unsub=onSnapshot(doc(db,"requests",orderId), async snap=>{
-    if(!snap.exists()){liveStatus.innerHTML="<h3>❌ تم إلغاء الطلب</h3>"; return;}
+    if(!snap.exists()){document.getElementById('liveStatus').innerHTML="<h3>❌ تم إلغاء الطلب</h3>"; return;}
     let o=snap.data();
-    document.querySelectorAll('.status-step').forEach(s=>s.classList.remove('active')); st1.classList.add('active');
-    if(o.driverId||o.status!=='new') st2.classList.add('active');
-    if(o.status==='on_the_way') st3.classList.add('active');
+    document.querySelectorAll('.status-step').forEach(s=>s.classList.remove('active')); 
+    document.getElementById('st1').classList.add('active');
+    if(o.driverId||o.status!=='new') document.getElementById('st2').classList.add('active');
+    if(o.status==='on_the_way') document.getElementById('st3').classList.add('active');
     if(o.status==='completed'){ document.querySelectorAll('.status-step').forEach(s=>s.classList.add('active')); }
     if(o.driverId){
       let drSnap=await getDoc(doc(db,"drivers",o.driverId)); let dr=drSnap.exists()?drSnap.data():{name:o.driverName,phone:o.driverPhone,vehicle:o.driverVehicle,plate:o.driverPlate,photoBase64:o.driverPhoto};
       currentDriverPos=o.driverLat?[o.driverLat,o.driverLng]:null;
-      driverLiveInfo.innerHTML=`<div class="card driver-live-card"><h4 style="margin:0">🚕 السائق في الطريق إليك</h4><div style="display:flex;gap:12px;align-items:center;margin:10px 0"><img src="${dr.photoBase64||'https://via.placeholder.com/70'}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid #27ae60"><div><b>${dr.name||o.driverName}</b><br>${dr.phone||o.driverPhone}<br><small>${dr.vehicle||''} - ${dr.plate||''}</small></div></div><a href="tel:${dr.phone||o.driverPhone}"><button class="btn" style="background:#0a3d62">📞 اتصال</button></a></div>`;
+      document.getElementById('driverLiveInfo').innerHTML=`<div class="card driver-live-card"><h4 style="margin:0">🚕 السائق في الطريق</h4><div style="display:flex;gap:12px;align-items:center;margin:10px 0"><img src="${dr.photoBase64||'https://via.placeholder.com/70'}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid #27ae60"><div><b>${dr.name||o.driverName}</b><br>${dr.phone||o.driverPhone}<br><small>${dr.vehicle||''} - ${dr.plate||''}</small></div></div><a href="tel:${dr.phone||o.driverPhone}"><button class="btn" style="background:#0a3d62">📞 اتصال</button></a></div>`;
       if(o.driverLat&&o.driverLng){
         if(driverMarker) trackMap.removeLayer(driverMarker);
         driverMarker=L.marker([o.driverLat,o.driverLng]).addTo(trackMap).bindPopup("السائق");
@@ -233,14 +247,13 @@ function startListening(orderId){
           customerMarker=L.marker([o.customerLat,o.customerLng]).addTo(trackMap).bindPopup("موقعك");
         }
       }
-      if(o.status==='completed'){ driverLiveInfo.innerHTML+=`<div style="background:#27ae60;color:#fff;padding:10px;border-radius:8px;text-align:center;margin-top:10px">✅ انتهت الرحلة - شكرا لك</div>`; setTimeout(()=>localStorage.removeItem('naqli_lastId'),3000); }
     }
   });
 }
 
 window.shareRide=()=>{
-  let text=`تتبع رحلتي على نقلي - https://maps.google.com/?q=${currentDriverPos?currentDriverPos.join(','):''}`;
-  if(navigator.share){navigator.share({title:'رحلتي',text});} else {prompt("انسخ رابط المشاركة:",text);}
+  let text=`تتبع رحلتي - https://maps.google.com/?q=${currentDriverPos?currentDriverPos.join(','):''}`;
+  if(navigator.share){navigator.share({title:'رحلتي',text});} else {prompt("انسخ الرابط:",text);}
 };
 </script>
 </body>
