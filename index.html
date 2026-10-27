@@ -20,7 +20,7 @@ import { db } from "./firebase.js";
 import { collection, addDoc, deleteDoc, doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 const prices={"تاكسي":100,"واوا":150,"شاحنة متوسطة 3 طن":600,"شاحنة كبيرة 10 طن":1000};
 let selVehicle="واوا",userLatLng=null,destLatLng=null,lastId=localStorage.getItem('naqli_lastId'),currentOrderId=lastId;
-let map,marker,destMarker,trackMap,driverMarker,customerMarker,destTrackMarker,unsub=null,currentDriverPos=null,routeLine=null;
+let map,marker,destMarker,trackMap,driverMarker,customerMarker,destTrackMarker,unsub=null,routeLine=null;
 let vehicleQuantity=1,destMode=false;
 const priceBoxEl=document.getElementById('priceBox'),mapStatusEl=document.getElementById('mapStatus'),destMapStatusEl=document.getElementById('destMapStatus'),retryBtnEl=document.getElementById('retryBtn'),msgEl=document.getElementById('msg'),routeInfoEl=document.getElementById('routeInfo');
 const cNameEl=document.getElementById('cName'),cPhoneEl=document.getElementById('cPhone'),gTypeEl=document.getElementById('gType'),gDescEl=document.getElementById('gDesc'),pickMEl=document.getElementById('pickM'),pickAreaEl=document.getElementById('pickArea'),destMEl=document.getElementById('destM'),destAreaEl=document.getElementById('destArea'),qtyEl=document.getElementById('vehicleQty'),qtyNumEl=document.getElementById('qtyNum'),suggestPickEl=document.getElementById('suggestPick'),suggestDestEl=document.getElementById('suggestDest');
@@ -42,42 +42,71 @@ if(lastId){document.getElementById('cancelBtn').style.display="block";}
 document.getElementById('sendBtn').onclick=async()=>{
 let finalPrice=calcPrice();
 let data={name:cNameEl.value.trim(),phone:cPhoneEl.value.trim(),vehicle:selVehicle,vehicleQuantity:vehicleQuantity,requiredVehicles:vehicleQuantity,acceptedCount:0,acceptedDrivers:[],rejectedDrivers:[],fromMuqataa:pickMEl.value,mouqataa:pickMEl.value,pickArea:pickAreaEl.value.trim(),pickMuqataaHay:`${pickMEl.value} - ${pickAreaEl.value.trim()}`,toMuqataa:destMEl.value,destMuqataa:destMEl.value,destArea:destAreaEl.value.trim(),destMuqataaHay:`${destMEl.value} - ${destAreaEl.value.trim()}`,goodsType:gTypeEl.value,goodsDesc:gDescEl.value.trim(),price:finalPrice,distanceKm:(userLatLng&&destLatLng?(map.distance(userLatLng,destLatLng)/1000).toFixed(2):0),customerLat:userLatLng?.lat,customerLng:userLatLng?.lng,lat:userLatLng?.lat,lng:userLatLng?.lng,fromLat:userLatLng?.lat,fromLng:userLatLng?.lng,destLat:destLatLng?.lat,destLng:destLatLng?.lng,status:"new",progress:10,createdAt:new Date()};
-if(!data.name||!data.phone||!data.fromMuqataa||!data.toMuqataa||!userLatLng||!data.destLat)return alert("أكمل البيانات - اختر المقاطعة والحي للطرفين");
+if(!data.name||!data.phone||!data.fromMuqataa||!data.toMuqataa||!userLatLng||!data.destLat)return alert("أكمل البيانات");
 if(!data.goodsType||!data.goodsDesc)return alert("البضاعة");
 let ref=await addDoc(collection(db,"requests"),data);lastId=ref.id;currentOrderId=ref.id;localStorage.setItem('naqli_lastId',lastId);
-msgEl.innerHTML=`<div style="background:#e8f5e9;padding:14px;border-radius:12px;text-align:center">✅ تم الإرسال!<br>🚚 مطلوب <b>${vehicleQuantity} مركبة</b><br>📍 من: <b>${data.pickMuqataaHay}</b><br>🎯 إلى: <b>${data.destMuqataaHay}</b><br>📏 ${data.distanceKm} كم</div>`;
+msgEl.innerHTML=`<div style="background:#e8f5e9;padding:14px;border-radius:12px;text-align:center">✅ تم!<br>🚚 مطلوب <b>${vehicleQuantity}</b><br>📍 من ${data.pickMuqataaHay} → ${data.destMuqataaHay}</div>`;
 document.getElementById('cancelBtn').style.display="block";document.getElementById('orderForm').style.display='none';document.getElementById('mapCard').style.display='none';document.getElementById('sendBtn').style.display='none';startListening(ref.id);
 };
 document.getElementById('cancelBtn').onclick=async()=>{let id=currentOrderId||localStorage.getItem('naqli_lastId');if(!id)return;if(!confirm("إلغاء؟"))return;await deleteDoc(doc(db,"requests",id));localStorage.removeItem('naqli_lastId');location.reload();};
+
 function startListening(orderId){
-document.getElementById('liveStatus').style.display='block';document.getElementById('trackMap').style.display='block';initTrackMap();setTimeout(()=>trackMap.invalidateSize(),500);if(unsub)unsub();
+document.getElementById('liveStatus').style.display='block';
+document.getElementById('trackMap').style.display='block';
+initTrackMap();setTimeout(()=>trackMap.invalidateSize(),500);if(unsub)unsub();
 unsub=onSnapshot(doc(db,"requests",orderId),async snap=>{
 if(!snap.exists()){document.getElementById('liveStatus').innerHTML="<h3>❌ ألغي</h3>";return;}
 let o=snap.data();
-document.querySelectorAll('.status-step').forEach(s=>s.classList.remove('active'));document.getElementById('st1').classList.add('active');
-if((o.acceptedDrivers&&o.acceptedDrivers.length>0)||o.driverId)document.getElementById('st2').classList.add('active');
-if(o.status==='on_the_way')document.getElementById('st3').classList.add('active');
-if(o.status==='completed')document.querySelectorAll('.status-step').forEach(s=>s.classList.add('active'));
+document.querySelectorAll('.status-step').forEach(s=>s.classList.remove('active'));
+document.getElementById('st1').classList.add('active');
+if((o.acceptedDrivers&&o.acceptedDrivers.length>0)||o.driverId) document.getElementById('st2').classList.add('active');
+if(o.status==='on_the_way') document.getElementById('st3').classList.add('active');
+if(o.status==='completed') document.querySelectorAll('.status-step').forEach(s=>s.classList.add('active'));
+
 let required=o.requiredVehicles||o.vehicleQuantity||1;
 let accepted=o.acceptedCount||(o.acceptedDrivers?o.acceptedDrivers.length:0);
-let html=`<div style="background:#0a3d62;color:#fff;padding:12px;border-radius:10px;margin-bottom:10px;text-align:center">🚚 مطلوب: <b>${required}</b> | ✅ تم قبول: <b>${accepted}</b> | ⏳ باقي: <b>${Math.max(0,required-accepted)}</b><br><small>📍 من ${o.pickMuqataaHay||o.fromMuqataa+' '+o.pickArea} → ${o.destMuqataaHay||o.toMuqataa+' '+o.destArea}</small><br>${accepted>=required&&required>0?'<span style="background:#27ae60;padding:4px 10px;border-radius:20px">✅ اكتمل العدد</span>':''}</div>`;
+let remaining=Math.max(0,required-accepted);
+
+let html=`<div style="background:#0a3d62;color:#fff;padding:14px;border-radius:12px;margin-bottom:12px;text-align:center">
+<div style="font-size:17px;font-weight:bold">🚚 طلبك: ${required} سيارات</div>
+<div style="display:flex;justify-content:space-around;margin-top:10px">
+<div style="background:rgba(255,255,255,.15);padding:8px 14px;border-radius:10px">مطلوب<br><b style="font-size:22px">${required}</b></div>
+<div style="background:#27ae60;padding:8px 14px;border-radius:10px">✅ قبل<br><b style="font-size:22px">${accepted}</b></div>
+<div style="background:#e67e22;padding:8px 14px;border-radius:10px">⏳ باقي<br><b style="font-size:22px">${remaining}</b></div>
+</div>
+<div style="margin-top:10px;font-size:12px;opacity:.9">📍 من ${o.pickMuqataaHay||o.fromMuqataa+' '+o.pickArea} → ${o.destMuqataaHay||o.toMuqataa+' '+o.destArea}</div>
+${accepted>=required?'<div style="background:#27ae60;padding:6px;border-radius:20px;margin-top:10px;font-weight:bold">✅ اكتمل العدد ${accepted}/${required}</div>':'<div style="background:#ff9800;padding:6px;border-radius:20px;margin-top:10px">⏳ ننتظر ${remaining} سيارة...</div>'}
+</div>`;
+
 if(o.acceptedDrivers&&o.acceptedDrivers.length>0){
 o.acceptedDrivers.forEach((d,i)=>{
 let whatsappLink=`https://wa.me/${(d.phone||'').replace(/[^0-9]/g,'')}`;
-html+=`<div class="card" style="border:2px solid #27ae60;background:#f0fff4;margin:8px 0"><b>🚚 سائق ${i+1}: ${d.name}</b> ✅<br>📞 ${d.phone}<br>🚗 ${d.vehicle||o.vehicle}<br><div style="display:flex;gap:6px"><a href="tel:${d.phone}" style="flex:1"><button class="btn" style="background:#0a3d62">📞 اتصال</button></a><a href="${whatsappLink}" target="_blank" style="flex:1"><button class="btn" style="background:#25D366">💬 واتساب</button></a></div></div>`;
-if(d.lat&&d.lng){currentDriverPos=[d.lat,d.lng];}
+let photoHtml = d.photoUrl ? `<img src="${d.photoUrl}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #27ae60">` : `<div style="width:70px;height:70px;border-radius:50%;background:#0a3d62;color:#fff;display:flex;align-items:center;justify-content:center;font-size:32px">👨‍✈️</div>`;
+html+=`<div class="card" style="border:2px solid #27ae60;background:linear-gradient(135deg,#f0fff4,#e8f5e9);margin:10px 0;display:flex;gap:12px">
+<div style="text-align:center">${photoHtml}<div style="background:#27ae60;color:#fff;border-radius:12px;padding:2px 8px;font-size:11px;margin-top:4px;font-weight:bold">سائق ${i+1}</div></div>
+<div style="flex:1">
+<b style="font-size:16px">👤 ${d.name}</b><br>
+📞 ${d.phone}<br>
+🚗 النوع: <b>${d.vehicle||d.vehicleType||o.vehicle}</b><br>
+🔢 اللوحة: <b style="background:#ffeb3b;color:#000;padding:3px 10px;border-radius:6px;border:1px solid #000">${d.plateNumber||d.plate||'غير مسجلة'}</b><br>
+<div style="display:flex;gap:6px;margin-top:8px">
+<a href="tel:${d.phone}" style="flex:1"><button class="btn" style="background:#0a3d62;margin:0;padding:10px">📞 اتصال</button></a>
+<a href="${whatsappLink}" target="_blank" style="flex:1"><button class="btn" style="background:#25D366;margin:0;padding:10px">💬 واتساب</button></a>
+</div>
+</div></div>`;
 });
 }else if(o.driverId){
 let drSnap=await getDoc(doc(db,"drivers",o.driverId));let dr=drSnap.exists()?drSnap.data():{name:o.driverName,phone:o.driverPhone};
 let whatsappLink=`https://wa.me/${(dr.phone||o.driverPhone||'').replace(/[^0-9]/g,'')}`;
-html+=`<div class="card" style="border:2px solid #27ae60;background:#f0fff4"><b>${dr.name||o.driverName}</b><br>${dr.phone||o.driverPhone}<br><a href="tel:${dr.phone||o.driverPhone}"><button class="btn" style="background:#0a3d62">📞 اتصال</button></a><a href="${whatsappLink}" target="_blank"><button class="btn" style="background:#25D366">💬 واتساب</button></a></div>`;
+let photoHtml = dr.photoUrl ? `<img src="${dr.photoUrl}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #27ae60">` : `<div style="width:70px;height:70px;border-radius:50%;background:#0a3d62;color:#fff;display:flex;align-items:center;justify-content:center;font-size:32px">👨‍✈️</div>`;
+html+=`<div class="card" style="border:2px solid #27ae60;background:#f0fff4;display:flex;gap:12px"><div>${photoHtml}</div><div style="flex:1"><b>👤 ${dr.name||o.driverName}</b><br>📞 ${dr.phone||o.driverPhone}<br>🚗 ${dr.vehicleType||dr.vehicle||o.vehicle}<br>🔢 لوحة: <b style="background:#ffeb3b;padding:3px 10px;border-radius:6px;color:#000">${dr.plateNumber||dr.plate||'غير مسجلة'}</b><br><div style="display:flex;gap:6px;margin-top:6px"><a href="tel:${dr.phone||o.driverPhone}" style="flex:1"><button class="btn" style="background:#0a3d62;margin:0">📞</button></a><a href="${whatsappLink}" target="_blank" style="flex:1"><button class="btn" style="background:#25D366;margin:0">💬 واتساب</button></a></div></div></div>`;
 }else{
-html+=`<div style="background:#fff3cd;padding:10px;border-radius:8px;text-align:center">⏳ بانتظار السائقين... سيظهرون هنا عند القبول<br>مطلوب ${required} سيارة</div>`;
+html+=`<div style="background:#fff3cd;padding:12px;border-radius:10px;text-align:center;border:2px dashed #ff9800">⏳ بانتظار السائقين...<br>مطلوب <b>${required}</b> - قبل <b>${accepted}</b><br>سيظهرون هنا عند قبولهم</div>`;
 }
 document.getElementById('driverLiveInfo').innerHTML=html;
 if(o.customerLat&&o.customerLng){if(customerMarker)trackMap.removeLayer(customerMarker);customerMarker=L.marker([o.customerLat,o.customerLng]).addTo(trackMap).bindPopup("📍 استلام: "+(o.pickMuqataaHay||""));}
 if(o.destLat&&o.destLng){if(destTrackMarker)trackMap.removeLayer(destTrackMarker);destTrackMarker=L.marker([o.destLat,o.destLng],{icon:L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',iconSize:[25,41]})}).addTo(trackMap).bindPopup("🎯 تسليم: "+(o.destMuqataaHay||""));}
-if(o.driverLat&&o.driverLng){if(driverMarker)trackMap.removeLayer(driverMarker);driverMarker=L.marker([o.driverLat,o.driverLng]).addTo(trackMap).bindPopup("السائق - "+(o.acceptedCount||1)+"/"+required);trackMap.setView([o.driverLat,o.driverLng],14);}
+if(o.driverLat&&o.driverLng){if(driverMarker)trackMap.removeLayer(driverMarker);driverMarker=L.marker([o.driverLat,o.driverLng]).addTo(trackMap).bindPopup(`السائق ${accepted}/${required}`);trackMap.setView([o.driverLat,o.driverLng],14);}
 });
 }
 window.shareRide=()=>{let text=`تتبع رحلتي - من ${pickMEl.value} ${pickAreaEl.value} إلى ${destMEl.value} ${destAreaEl.value} - ${vehicleQuantity} مركبة`;if(navigator.share){navigator.share({title:'رحلتي',text:text});}else{prompt("انسخ:",text);}};
