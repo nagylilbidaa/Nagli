@@ -3,7 +3,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نقلي - الزبون</title>
+<title>نقلي - نواكشوط فقط</title>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#27ae60">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -13,13 +13,14 @@
 body{background:#f5f7fa;margin:0;padding:12px}
 .card{background:#fff;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.07)}
 input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:10px;margin:7px 0;font-size:15px}
-#map{height:380px;width:100%;border-radius:12px;border:2px solid #27ae60}
+#map{height:420px;width:100%;border-radius:12px;border:2px solid #27ae60}
 #trackMap{height:350px;width:100%;border-radius:12px;border:2px solid #0a3d62;display:none;margin-top:10px}
 .price{background:#e8f5e9;border:1px dashed #27ae60;padding:12px;border-radius:10px;text-align:center;font-weight:bold;font-size:19px;margin-top:10px}
 .btn{width:100%;padding:14px;background:#27ae60;color:#fff;border:0;border-radius:12px;font-size:18px;font-weight:bold;cursor:pointer;margin-top:8px}
 .btn-call-top{background:#0a3d62;text-decoration:none;display:block;text-align:center}
 .btn-cancel{background:#e74c3c}
 .btn-gps{background:#1a73e8}
+.btn-dest{background:#ff9800}
 .label{font-weight:bold;margin-top:8px;display:block;color:#333}
 .vehicles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
 .v-card{padding:14px;border-radius:12px;border:2px solid #eee;cursor:pointer;text-align:center}
@@ -32,39 +33,19 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-
 .status-dot{width:24px;height:24px;border-radius:50%;background:#eee;margin:0 auto 4px;display:flex;align-items:center;justify-content:center}
 .status-step.active .status-dot{background:#27ae60;color:#fff}
 .driver-live-card{border:2px solid #27ae60;background:linear-gradient(135deg,#f0fff4,#e8f5e9)}
+.qty-box{display:flex;align-items:center;gap:10px;margin:8px 0}
+.qty-btn{width:44px;height:44px;border-radius:10px;border:2px solid #27ae60;background:#fff;color:#27ae60;font-size:22px;font-weight:bold;cursor:pointer}
+.qty-num{flex:1;text-align:center;font-size:20px;font-weight:bold;background:#e8f5e9;padding:10px;border-radius:10px}
+.live-distance{background:#0a3d62;color:#fff;padding:10px;border-radius:10px;margin:8px 0;text-align:center;font-size:15px}
 </style>
 </head>
 <body>
-
-<div id="loginOverlay">
-  <div class="card" style="width:100%;max-width:380px;text-align:center">
-    <h2 style="color:#27ae60;margin:0">🚚 نقلي</h2>
-    <p>مرحبا! سجل دخولك</p>
-    <label class="label" style="text-align:right">الاسم *</label><input id="loginName">
-    <label class="label" style="text-align:right">رقم الهاتف *</label><input id="loginPhone" type="tel">
-    <button class="btn" onclick="doLogin()">✅ دخول</button>
-  </div>
-</div>
-
+<div id="loginOverlay"><div class="card" style="width:100%;max-width:380px;text-align:center"><h2 style="color:#27ae60;margin:0">🚚 نقلي</h2><p>نواكشوط فقط</p><label class="label" style="text-align:right">الاسم *</label><input id="loginName"><label class="label" style="text-align:right">رقم الهاتف *</label><input id="loginPhone" type="tel"><button class="btn" onclick="doLogin()">✅ دخول</button></div></div>
 <a class="btn btn-call-top" href="tel:+22232449538">📞 طلب باتصال سريع</a>
-<h2 style="text-align:center;color:#27ae60">🚚 نقلي - طلب توصيل</h2>
-
-<div class="card" id="liveStatus" style="display:none">
-  <h3 style="margin:0 0 10px 0">📦 حالة طلبك</h3>
-  <div class="status-bar">
-    <div class="status-step active" id="st1"><div class="status-dot">1</div>تم الإرسال</div>
-    <div class="status-step" id="st2"><div class="status-dot">2</div>قبول</div>
-    <div class="status-step" id="st3"><div class="status-dot">3</div>في الطريق</div>
-    <div class="status-step" id="st4"><div class="status-dot">4</div>تم</div>
-  </div>
-  <div id="driverLiveInfo"></div>
-  <div id="trackMap"></div>
-  <button class="btn" style="background:#ff9800" onclick="shareRide()">📤 مشاركة الرحلة</button>
-</div>
-
+<h2 style="text-align:center;color:#27ae60">🚚 نقلي - نواكشوط فقط</h2>
+<div class="card" id="liveStatus" style="display:none"><h3>📦 حالة طلبك</h3><div class="status-bar"><div class="status-step active" id="st1"><div class="status-dot">1</div>تم الإرسال</div><div class="status-step" id="st2"><div class="status-dot">2</div>قبول</div><div class="status-step" id="st3"><div class="status-dot">3</div>في الطريق</div><div class="status-step" id="st4"><div class="status-dot">4</div>تم</div></div><div id="driverLiveInfo"></div><div id="liveDistanceBox"></div><div id="trackMap"></div></div>
 <div class="card" id="orderForm">
-<label class="label">الاسم الكامل *</label><input id="cName">
-<label class="label">رقم الهاتف *</label><input id="cPhone">
+<label class="label">الاسم الكامل *</label><input id="cName"><label class="label">رقم الهاتف *</label><input id="cPhone">
 <label class="label">نوع السيارة *</label>
 <div class="vehicles">
 <div class="v-card v-taxi" data-v="تاكسي">🚕<br><b>تاكسي</b><br><small>100 MRU</small></div>
@@ -72,189 +53,63 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-
 <div class="v-card v-med" data-v="شاحنة متوسطة 3 طن">🚚<br><b>3 طن</b><br><small>600 MRU</small></div>
 <div class="v-card v-big" data-v="شاحنة كبيرة 10 طن">🚛<br><b>10 طن</b><br><small>1000 MRU</small></div>
 </div>
+<label class="label">🔢 العدد المطلوب *</label><div class="qty-box"><button class="qty-btn" onclick="changeQty(-1)">-</button><div class="qty-num" id="qtyNum">1 مركبة</div><button class="qty-btn" onclick="changeQty(1)">+</button></div><input type="hidden" id="vehicleQty" value="1">
 <label class="label">نوع البضاعة *</label><select id="gType"><option value="">اختر...</option><option>أثاث</option><option>مواد غذائية</option><option>مستندات</option><option>أجهزة</option><option>مواد بناء</option><option>أخرى</option></select>
 <label class="label">وصف البضاعة *</label><textarea id="gDesc" rows="2"></textarea>
-<label class="label">مكان الاستلام *</label><select id="pickM"><option value="">اختر المقاطعة...</option><option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>دار النعيم</option><option>الرياض</option><option>الميناء</option><option>السبخة</option></select>
+<label class="label" style="color:#0a3d62">📍 المنطقة المتواجد فيها - نواكشوط *</label>
+<label class="label">اختيار المقاطعة الحالية</label><select id="pickM"><option value="">اختر...</option><option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>دار النعيم</option><option>الرياض</option><option>الميناء</option><option>السبخة</option></select>
 <input id="pickArea" placeholder="الحي / قرب...">
-<label class="label">المنطقة المتوجه إليها *</label><input id="destArea" placeholder="نواذيبو - كيفة...">
-<div class="price" id="priceBox">💰 مبلغ الرحلة: 150 MRU جديدة - واوا</div>
+<label class="label" style="color:#e67e22">🎯 المنطقة المتوجه إليها - نواكشوط فقط *</label>
+<label class="label">اختيار مقاطعة الوجهة</label><select id="destM"><option value="">اختر مقاطعة الوجهة...</option><option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>دار النعيم</option><option>الرياض</option><option>الميناء</option><option>السبخة</option></select>
+<input id="destArea" placeholder="الحي والشارع">
+<div class="price" id="priceBox">💰 مبلغ الرحلة: 150 MRU</div>
 </div>
-
-<div class="card" id="mapCard">
-<label class="label">📍 موقعك (سيتحدد تلقائيا)</label>
-<div id="map"></div>
-<p id="mapStatus" style="text-align:center;font-weight:bold;color:#1a73e8">⏳ جاري طلب الإذن...</p>
-<button class="btn btn-gps" id="retryBtn" style="display:none" onclick="requestLocation()">📡 شغلت الـ GPS؟ اضغط هنا</button>
-</div>
-
-<button class="btn" id="sendBtn">✅ إرسال الطلب الآن</button>
-<button class="btn btn-cancel" id="cancelBtn" style="display:none">❌ إلغاء الطلب</button>
-<div id="msg"></div>
-
-<script>
-function doLogin(){let n=document.getElementById('loginName').value.trim(),p=document.getElementById('loginPhone').value.trim();if(n.length<3)return alert('أدخل الاسم');if(p.length<8)return alert('رقم خاطئ');localStorage.setItem('naqli_name',n);localStorage.setItem('naqli_phone',p);document.getElementById('loginOverlay').style.display='none';document.getElementById('cName').value=n;document.getElementById('cPhone').value=p;}
-(function(){let a=localStorage.getItem('naqli_name'),b=localStorage.getItem('naqli_phone');if(a&&b)document.getElementById('loginOverlay').style.display='none';})();
-</script>
-
+<div class="card" id="mapCard"><label class="label">📍 موقعك + وجهتك (GPS تلقائي)</label><div id="map"></div><p id="mapStatus" style="text-align:center;font-weight:bold;color:#1a73e8">⏳ جاري تحديد موقعك...</p><p id="destMapStatus" style="text-align:center;font-size:13px;color:#e67e22">اضغط زر الوجهة</p><button class="btn btn-gps" id="retryBtn" style="display:none" onclick="requestLocation()">📡 اضغط هنا</button><button class="btn btn-dest" id="setDestBtn" onclick="enableDestMode()">🎯 حدد الوجهة على الخريطة</button><button class="btn btn-gps" onclick="autoDetectDest()">🧭 تحديد الوجهة تلقائيا</button></div>
+<button class="btn" id="sendBtn">✅ إرسال الطلب الآن</button><button class="btn btn-cancel" id="cancelBtn" style="display:none">❌ إلغاء الطلب</button><div id="msg"></div>
+<script>function doLogin(){let n=document.getElementById('loginName').value.trim(),p=document.getElementById('loginPhone').value.trim();if(n.length<3)return alert('أدخل الاسم');if(p.length<8)return alert('رقم خاطئ');localStorage.setItem('naqli_name',n);localStorage.setItem('naqli_phone',p);document.getElementById('loginOverlay').style.display='none';document.getElementById('cName').value=n;document.getElementById('cPhone').value=p;} (function(){let a=localStorage.getItem('naqli_name'),b=localStorage.getItem('naqli_phone');if(a&&b)document.getElementById('loginOverlay').style.display='none';})();</script>
 <script type="module">
 import { db } from "./firebase.js";
 import { collection, addDoc, deleteDoc, doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
 const prices={"تاكسي":100,"واوا":150,"شاحنة متوسطة 3 طن":600,"شاحنة كبيرة 10 طن":1000};
-let selVehicle="واوا", userLatLng=null, lastId=localStorage.getItem('naqli_lastId'), currentOrderId=lastId;
-let map, marker, trackMap, driverMarker, customerMarker, unsub=null, currentDriverPos=null;
-
-const priceBoxEl = document.getElementById('priceBox');
-const mapStatusEl = document.getElementById('mapStatus');
-const retryBtnEl = document.getElementById('retryBtn');
-const msgEl = document.getElementById('msg');
-const cNameEl = document.getElementById('cName');
-const cPhoneEl = document.getElementById('cPhone');
-const gTypeEl = document.getElementById('gType');
-const gDescEl = document.getElementById('gDesc');
-const pickMEl = document.getElementById('pickM');
-const pickAreaEl = document.getElementById('pickArea');
-const destAreaEl = document.getElementById('destArea');
-
-document.querySelectorAll('.v-card').forEach(c=>c.addEventListener('click',()=>{
-  document.querySelectorAll('.v-card').forEach(x=>x.classList.remove('selected'));
-  c.classList.add('selected');selVehicle=c.dataset.v;calcPrice();
-}));
-
-function calcPrice(){
-  let base=prices[selVehicle], extra=0;
-  if(userLatLng && map){
-    let dist=map.distance(userLatLng, L.latLng(18.0735,-15.9582))/1000;
-    extra=Math.round(dist*5);
-  }
-  let total=base+extra;
-  priceBoxEl.textContent=`💰 مبلغ الرحلة: ${total} MRU - ${selVehicle} ${extra?`(+${extra} مسافة)`:''}`;
-  return total;
-}
-
-function initMap(){
-  map=L.map('map').setView([18.0735,-15.9582],12);
-  L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
-    maxZoom:20,
-    subdomains:['mt0','mt1','mt2','mt3'],
-    attribution:'© Google Maps'
-  }).addTo(map);
-  map.on('click',e=>{
-    userLatLng=e.latlng;
-    if(marker) map.removeLayer(marker);
-    marker=L.marker(e.latlng,{draggable:true}).addTo(map).bindPopup("موقع الاستلام").openPopup();
-    marker.on('dragend', ev=>{ userLatLng=ev.target.getLatLng(); calcPrice(); });
-    mapStatusEl.textContent="✅ تم تحديد الموقع يدويا";
-    mapStatusEl.style.color="green";
-    retryBtnEl.style.display="none";
-    calcPrice();
-  });
-  setTimeout(()=>map.invalidateSize(),800);
-  if(currentOrderId) startListening(currentOrderId);
-  setTimeout(()=>window.requestLocation(),1200);
-}
-
-window.requestLocation=()=>{
-  if(!navigator.geolocation){
-    mapStatusEl.textContent="❌ هاتفك لا يدعم تحديد الموقع";
-    mapStatusEl.style.color="red";
-    return;
-  }
-  mapStatusEl.textContent="⏳ جاري تحديد موقعك... شغل GPS واسمح للمتصفح";
-  mapStatusEl.style.color="#1a73e8";
-  retryBtnEl.style.display="none";
-  
-  navigator.geolocation.getCurrentPosition(pos=>{
-    let lat=pos.coords.latitude;
-    let lng=pos.coords.longitude;
-    userLatLng=L.latLng(lat,lng);
-    if(marker) map.removeLayer(marker);
-    marker=L.marker([lat,lng],{draggable:true}).addTo(map).bindPopup("📍 أنت هنا").openPopup();
-    map.setView([lat,lng],17);
-    mapStatusEl.textContent="✅ تم تحديد موقعك تلقائيا";
-    mapStatusEl.style.color="green";
-    calcPrice();
-    marker.on('dragend', e=>{ userLatLng=e.target.getLatLng(); calcPrice(); });
-  }, err=>{
-    if(err.code===1){
-      mapStatusEl.innerHTML="❌ رفضت السماح بالموقع - شغل GPS واسمح ثم اضغط الزر";
-    }else if(err.code===2){
-      mapStatusEl.innerHTML="❌ GPS مطفي - شغله من الأعلى ثم اضغط الزر";
-    }else{
-      mapStatusEl.innerHTML="❌ فشل التحديد - اضغط الزر مرة أخرى";
-    }
-    mapStatusEl.style.color="red";
-    retryBtnEl.style.display="block";
-  }, {enableHighAccuracy:true, timeout:15000, maximumAge:0});
-}
-
+let selVehicle="واوا", userLatLng=null, destLatLng=null, lastId=localStorage.getItem('naqli_lastId'), currentOrderId=lastId;
+let map, marker, destMarker, trackMap, driverMarker, customerMarker, destTrackMarker, unsub=null, currentDriverPos=null;
+let vehicleQuantity=1; let destMode=false;
+const priceBoxEl=document.getElementById('priceBox'); const mapStatusEl=document.getElementById('mapStatus'); const destMapStatusEl=document.getElementById('destMapStatus'); const retryBtnEl=document.getElementById('retryBtn'); const msgEl=document.getElementById('msg');
+const cNameEl=document.getElementById('cName'); const cPhoneEl=document.getElementById('cPhone'); const gTypeEl=document.getElementById('gType'); const gDescEl=document.getElementById('gDesc'); const pickMEl=document.getElementById('pickM'); const pickAreaEl=document.getElementById('pickArea'); const destMEl=document.getElementById('destM'); const destAreaEl=document.getElementById('destArea'); const qtyEl=document.getElementById('vehicleQty'); const qtyNumEl=document.getElementById('qtyNum');
+window.changeQty=(delta)=>{vehicleQuantity=Math.max(1,Math.min(10,vehicleQuantity+delta)); qtyEl.value=vehicleQuantity; qtyNumEl.textContent=vehicleQuantity+(vehicleQuantity==1?" مركبة":" مركبات"); calcPrice();};
+document.querySelectorAll('.v-card').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.v-card').forEach(x=>x.classList.remove('selected')); c.classList.add('selected'); selVehicle=c.dataset.v; calcPrice();}));
+function calcPrice(){let base=prices[selVehicle], extra=0; if(userLatLng && destLatLng && map){let dist=map.distance(userLatLng,destLatLng)/1000; extra=Math.round(dist*5);} let total=(base*vehicleQuantity)+extra; priceBoxEl.textContent=`💰 مبلغ الرحلة: ${total} MRU - ${selVehicle} × ${vehicleQuantity} ${extra?`(+${extra} مسافة)`:''}`; return total;}
+function initMap(){map=L.map('map').setView([18.0735,-15.9582],12); L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{maxZoom:20,subdomains:['mt0','mt1','mt2','mt3']}).addTo(map); map.on('click',e=>{if(destMode){destLatLng=e.latlng; if(destMarker) map.removeLayer(destMarker); destMarker=L.marker(e.latlng,{draggable:true}).addTo(map).bindPopup("🎯 الوصول").openPopup(); destMapStatusEl.textContent="✅ تم تحديد الوجهة"; destMode=false; calcPrice();} else {userLatLng=e.latlng; if(marker) map.removeLayer(marker); marker=L.marker(e.latlng,{draggable:true}).addTo(map).bindPopup("📍 أنت هنا").openPopup(); mapStatusEl.textContent="✅ تم التحديد"; calcPrice();}}); setTimeout(()=>map.invalidateSize(),800); if(currentOrderId) startListening(currentOrderId); setTimeout(()=>window.requestLocation(),1200);}
+window.enableDestMode=()=>{destMode=true; destMapStatusEl.textContent="👆 اضغط على الخريطة لتحديد الوجهة";};
+window.autoDetectDest=()=>{if(!userLatLng){alert("حدد موقعك أولا");return;} destLatLng=L.latLng(userLatLng.lat+0.01,userLatLng.lng+0.01); if(destMarker) map.removeLayer(destMarker); destMarker=L.marker(destLatLng,{draggable:true}).addTo(map).bindPopup("🎯 وجهتك").openPopup(); calcPrice();};
+window.requestLocation=()=>{navigator.geolocation.getCurrentPosition(pos=>{userLatLng=L.latLng(pos.coords.latitude,pos.coords.longitude); if(marker) map.removeLayer(marker); marker=L.marker(userLatLng,{draggable:true}).addTo(map).bindPopup("📍 أنت هنا").openPopup(); map.setView(userLatLng,16); mapStatusEl.textContent="✅ تم تحديد موقعك تلقائيا"; calcPrice(); setTimeout(()=>{if(!destLatLng) autoDetectDest();},1500);}, err=>{mapStatusEl.textContent="❌ فشل"; retryBtnEl.style.display="block";}, {enableHighAccuracy:true});}
 function initTrackMap(){ if(trackMap) return; trackMap=L.map('trackMap').setView([18.0735,-15.9582],13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap); }
-
 window.addEventListener('load',initMap);
-cNameEl.value=localStorage.getItem('naqli_name')||""; 
-cPhoneEl.value=localStorage.getItem('naqli_phone')||"";
+cNameEl.value=localStorage.getItem('naqli_name')||""; cPhoneEl.value=localStorage.getItem('naqli_phone')||"";
 if(lastId) document.getElementById('cancelBtn').style.display="block";
-
 document.getElementById('sendBtn').onclick=async()=>{
   let finalPrice=calcPrice();
-  let data={name:cNameEl.value.trim(),phone:cPhoneEl.value.trim(),vehicle:selVehicle,goodsType:gTypeEl.value,goodsDesc:gDescEl.value.trim(),mouqataa:pickMEl.value,pickArea:pickAreaEl.value.trim(),destArea:destAreaEl.value.trim(),price:finalPrice,customerLat:userLatLng?.lat,customerLng:userLatLng?.lng,lat:userLatLng?.lat,lng:userLatLng?.lng,status:"new",progress:10,createdAt:new Date()};
-  if(!data.name||!data.phone||!data.goodsDesc||!data.mouqataa||!data.destArea||!userLatLng) return alert("أكمل البيانات وحدد موقعك على الخريطة");
-  localStorage.setItem('naqli_name',data.name); localStorage.setItem('naqli_phone',data.phone);
-  msgEl.textContent="⏳ جاري الإرسال...";
-  try{
-    let ref=await addDoc(collection(db,"requests"),data);
-    lastId=ref.id; currentOrderId=ref.id; localStorage.setItem('naqli_lastId',lastId);
-    msgEl.innerHTML=`<div style="background:#e8f5e9;padding:14px;border-radius:12px">✅ تم الإرسال!</div>`;
-    document.getElementById('cancelBtn').style.display="block"; 
-    document.getElementById('orderForm').style.display='none'; 
-    document.getElementById('mapCard').style.display='none'; 
-    document.getElementById('sendBtn').style.display='none';
-    startListening(ref.id);
-  }catch(e){ msgEl.textContent="خطأ: "+e.message; }
+  let data={name:cNameEl.value.trim(),phone:cPhoneEl.value.trim(),vehicle:selVehicle,vehicleQuantity:vehicleQuantity,goodsType:gTypeEl.value,goodsDesc:gDescEl.value.trim(),fromMuqataa:pickMEl.value,mouqataa:pickMEl.value,pickArea:pickAreaEl.value.trim(),toMuqataa:destMEl.value,destMuqataa:destMEl.value,destArea:destAreaEl.value.trim(),price:finalPrice,customerLat:userLatLng?.lat,customerLng:userLatLng?.lng,lat:userLatLng?.lat,lng:userLatLng?.lng,destLat:destLatLng?.lat,destLng:destLatLng?.lng,status:"new",progress:10,createdAt:new Date()};
+  if(!data.name||!data.phone||!data.fromMuqataa||!data.toMuqataa||!userLatLng||!data.destLat) return alert("أكمل البيانات وحدد الموقعين");
+  let ref=await addDoc(collection(db,"requests"),data); lastId=ref.id; localStorage.setItem('naqli_lastId',lastId); msgEl.innerHTML="✅ تم الإرسال!"; document.getElementById('orderForm').style.display='none'; document.getElementById('mapCard').style.display='none'; document.getElementById('sendBtn').style.display='none'; startListening(ref.id);
 };
-
-document.getElementById('cancelBtn').onclick=async()=>{
-  let id=currentOrderId||localStorage.getItem('naqli_lastId'); if(!id) return;
-  if(!confirm("إلغاء الطلب؟")) return;
-  await deleteDoc(doc(db,"requests",id));
-  msgEl.innerHTML=`<div style="background:#ffebee;padding:10px;border-radius:10px">❌ تم الإلغاء</div>`;
-  document.getElementById('cancelBtn').style.display="none"; localStorage.removeItem('naqli_lastId'); currentOrderId=null; if(unsub) unsub(); location.reload();
-};
-
+document.getElementById('cancelBtn').onclick=async()=>{let id=currentOrderId||localStorage.getItem('naqli_lastId'); await deleteDoc(doc(db,"requests",id)); localStorage.removeItem('naqli_lastId'); location.reload();};
 function startListening(orderId){
-  document.getElementById('liveStatus').style.display='block'; 
-  document.getElementById('trackMap').style.display='block'; 
-  initTrackMap(); setTimeout(()=>trackMap.invalidateSize(),500);
-  if(unsub) unsub();
+  document.getElementById('liveStatus').style.display='block'; document.getElementById('trackMap').style.display='block'; initTrackMap(); setTimeout(()=>trackMap.invalidateSize(),500); if(unsub) unsub();
   unsub=onSnapshot(doc(db,"requests",orderId), async snap=>{
-    if(!snap.exists()){document.getElementById('liveStatus').innerHTML="<h3>❌ تم إلغاء الطلب</h3>"; return;}
-    let o=snap.data();
-    document.querySelectorAll('.status-step').forEach(s=>s.classList.remove('active')); 
-    document.getElementById('st1').classList.add('active');
-    if(o.driverId||o.status!=='new') document.getElementById('st2').classList.add('active');
-    if(o.status==='on_the_way') document.getElementById('st3').classList.add('active');
-    if(o.status==='completed'){ document.querySelectorAll('.status-step').forEach(s=>s.classList.add('active')); }
+    if(!snap.exists())return; let o=snap.data();
     if(o.driverId){
-      let drSnap=await getDoc(doc(db,"drivers",o.driverId)); let dr=drSnap.exists()?drSnap.data():{name:o.driverName,phone:o.driverPhone,vehicle:o.driverVehicle,plate:o.driverPlate,photoBase64:o.driverPhoto};
+      let drSnap=await getDoc(doc(db,"drivers",o.driverId)); let dr=drSnap.exists()?drSnap.data():{name:o.driverName,phone:o.driverPhone};
       currentDriverPos=o.driverLat?[o.driverLat,o.driverLng]:null;
-      document.getElementById('driverLiveInfo').innerHTML=`<div class="card driver-live-card"><h4 style="margin:0">🚕 السائق في الطريق</h4><div style="display:flex;gap:12px;align-items:center;margin:10px 0"><img src="${dr.photoBase64||'https://via.placeholder.com/70'}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid #27ae60"><div><b>${dr.name||o.driverName}</b><br>${dr.phone||o.driverPhone}<br><small>${dr.vehicle||''} - ${dr.plate||''}</small></div></div><a href="tel:${dr.phone||o.driverPhone}"><button class="btn" style="background:#0a3d62">📞 اتصال</button></a></div>`;
-      if(o.driverLat&&o.driverLng){
-        if(driverMarker) trackMap.removeLayer(driverMarker);
-        driverMarker=L.marker([o.driverLat,o.driverLng]).addTo(trackMap).bindPopup("السائق");
-        trackMap.setView([o.driverLat,o.driverLng],15);
-        if(o.customerLat&&o.customerLng){
-          if(customerMarker) trackMap.removeLayer(customerMarker);
-          customerMarker=L.marker([o.customerLat,o.customerLng]).addTo(trackMap).bindPopup("موقعك");
-        }
-      }
+      let distanceText="", etaText=""; if(o.driverLat && o.customerLat && trackMap){let d=trackMap.distance([o.driverLat,o.driverLng],[o.customerLat,o.customerLng]); distanceText=(d/1000).toFixed(2)+" كم"; etaText=Math.max(1,Math.round((d/1000)/0.5))+" دقيقة"; document.getElementById('liveDistanceBox').innerHTML=`<div class="live-distance">📏 ${distanceText} | ⏱️ ${etaText}</div>`;}
+      let whatsappLink=`https://wa.me/${(dr.phone||o.driverPhone||'').replace(/[^0-9]/g,'')}`;
+      document.getElementById('driverLiveInfo').innerHTML=`<div class="card driver-live-card"><b>${dr.name||o.driverName}</b><br>${dr.phone||o.driverPhone}<br><small>من ${o.fromMuqataa} → ${o.toMuqataa} - ${o.vehicleQuantity} مركبة</small><br><a href="tel:${dr.phone}"><button class="btn" style="background:#0a3d62">📞 اتصال</button></a><a href="${whatsappLink}" target="_blank"><button class="btn" style="background:#25D366">💬 واتساب</button></a></div>`;
+      if(o.driverLat){if(driverMarker) trackMap.removeLayer(driverMarker); driverMarker=L.marker([o.driverLat,o.driverLng]).addTo(trackMap); trackMap.setView([o.driverLat,o.driverLng],15);}
     }
   });
 }
-
-window.shareRide=()=>{
-  let text=`تتبع رحلتي - https://maps.google.com/?q=${currentDriverPos?currentDriverPos.join(','):''}`;
-  if(navigator.share){navigator.share({title:'رحلتي',text});} else {prompt("انسخ الرابط:",text);}
-};
 </script>
 </body>
 </html>
+
+انسخه، احفظه، وارفعه.
