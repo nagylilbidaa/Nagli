@@ -3,104 +3,150 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نقلي - مثل Google Maps</title>
+<title>نقلي - نواكشوط - Google Maps</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#27ae60">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;font-family:Tajawal,Arial}
 body{background:#f5f7fa;margin:0;padding:12px}
 .card{background:#fff;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.07)}
-input,select{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:10px;margin:7px 0;font-size:15px}
+input,select,textarea{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:10px;margin:7px 0;font-size:15px}
 #map{height:500px;width:100%;border-radius:12px;border:2px solid #27ae60}
-.suggest-box{background:#fff;border:1px solid #ddd;border-radius:8px;max-height:160px;overflow-y:auto;display:none;position:relative;z-index:1000}
-.suggest-item{padding:10px;cursor:pointer;border-bottom:1px solid #eee}
+#trackMap{height:350px;width:100%;border-radius:12px;border:2px solid #0a3d62;display:none;margin-top:10px}
+.suggest-box{background:#fff;border:2px solid #27ae60;border-radius:8px;max-height:180px;overflow-y:auto;display:none;position:relative;z-index:9999;margin-top:-5px}
+.suggest-item{padding:12px;cursor:pointer;border-bottom:1px solid #eee;font-size:14px}
 .suggest-item:hover{background:#e8f5e9}
-.route-info{background:#0a3d62;color:#fff;padding:12px;border-radius:10px;margin:10px 0;text-align:center;font-size:16px;line-height:1.6}
-.price{background:#e8f5e9;border:2px dashed #27ae60;padding:12px;border-radius:10px;text-align:center;font-weight:bold;font-size:18px}
+.route-info{background:#0a3d62;color:#fff;padding:12px;border-radius:10px;margin:10px 0;text-align:center;font-size:15px;line-height:1.7;display:none}
+.price{background:#e8f5e9;border:2px dashed #27ae60;padding:12px;border-radius:10px;text-align:center;font-weight:bold;font-size:18px;margin-top:10px;line-height:1.6}
 .btn{width:100%;padding:14px;background:#27ae60;color:#fff;border:0;border-radius:12px;font-size:18px;font-weight:bold;cursor:pointer;margin-top:8px}
-.label{font-weight:bold;margin-top:8px;display:block}
+.btn-call-top{background:#0a3d62;text-decoration:none;display:block;text-align:center}
+.btn-cancel{background:#e74c3c}
+.btn-gps{background:#1a73e8}
+.btn-dest{background:#ff9800}
+.label{font-weight:bold;margin-top:8px;display:block;color:#333}
 .vehicles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
 .v-card{padding:14px;border-radius:12px;border:2px solid #eee;cursor:pointer;text-align:center}
-.v-card.selected{border-color:#27ae60;transform:scale(1.02)}
-.qty-box{display:flex;align-items:center;gap:10px;margin:8px 0}
-.qty-btn{width:44px;height:44px;border-radius:10px;border:2px solid #27ae60;background:#fff;color:#27ae60;font-size:22px;font-weight:bold}
-.qty-num{flex:1;text-align:center;font-size:20px;font-weight:bold;background:#e8f5e9;padding:10px;border-radius:10px}
+.v-card.selected{border-color:#27ae60;box-shadow:0 4px 12px rgba(39,174,96,.4);transform:scale(1.02)}
+.v-taxi{background:linear-gradient(135deg,#fff9c4,#ffeb3b)} .v-wawa{background:linear-gradient(135deg,#e3f2fd,#90caf9)} .v-med{background:linear-gradient(135deg,#e8f5e9,#a5d6a7)} .v-big{background:linear-gradient(135deg,#fce4ec,#f48fb1)}
 #loginOverlay{position:fixed;inset:0;background:#f5f7fa;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px}
+.status-bar{display:flex;justify-content:space-between;margin:10px 0}
+.status-step{flex:1;text-align:center;font-size:12px;color:#999}
+.status-step.active{color:#27ae60;font-weight:bold}
+.status-dot{width:24px;height:24px;border-radius:50%;background:#eee;margin:0 auto 4px;display:flex;align-items:center;justify-content:center}
+.status-step.active .status-dot{background:#27ae60;color:#fff}
+.driver-live-card{border:2px solid #27ae60;background:linear-gradient(135deg,#f0fff4,#e8f5e9)}
+.qty-box{display:flex;align-items:center;gap:10px;margin:8px 0}
+.qty-btn{width:44px;height:44px;border-radius:10px;border:2px solid #27ae60;background:#fff;color:#27ae60;font-size:22px;font-weight:bold;cursor:pointer}
+.qty-num{flex:1;text-align:center;font-size:20px;font-weight:bold;background:#e8f5e9;padding:10px;border-radius:10px}
+.live-distance{background:#0a3d62;color:#fff;padding:10px;border-radius:10px;margin:8px 0;text-align:center;font-size:15px}
 </style>
 </head>
 <body>
-<div id="loginOverlay"><div class="card" style="width:100%;max-width:380px;text-align:center"><h2 style="color:#27ae60">🚚 نقلي</h2><p>مثل Google Maps</p><input id="loginName" placeholder="الاسم"><input id="loginPhone" placeholder="الهاتف"><button class="btn" onclick="doLogin()">دخول</button></div></div>
+<div id="loginOverlay"><div class="card" style="width:100%;max-width:380px;text-align:center"><h2 style="color:#27ae60;margin:0">🚚 نقلي</h2><p>نواكشوط فقط - مثل Google Maps</p><label class="label" style="text-align:right">الاسم الكامل *</label><input id="loginName"><label class="label" style="text-align:right">رقم الهاتف *</label><input id="loginPhone" type="tel"><button class="btn" onclick="doLogin()">✅ دخول</button></div></div>
+
+<a class="btn btn-call-top" href="tel:+22232449538">📞 طلب باتصال سريع - نواكشوط</a>
+<h2 style="text-align:center;color:#27ae60">🚚 نقلي - نواكشوط فقط</h2>
+
+<div class="card" id="liveStatus" style="display:none"><h3>📦 حالة طلبك الحالي</h3><div class="status-bar"><div class="status-step active" id="st1"><div class="status-dot">1</div>تم الإرسال</div><div class="status-step" id="st2"><div class="status-dot">2</div>قبول السائق</div><div class="status-step" id="st3"><div class="status-dot">3</div>في الطريق</div><div class="status-step" id="st4"><div class="status-dot">4</div>تم التسليم</div></div><div id="driverLiveInfo"></div><div id="liveDistanceBox"></div><div id="trackMap"></div><button class="btn" style="background:#ff9800" onclick="shareRide()">📤 مشاركة موقع الرحلة مع العائلة</button></div>
 
 <div class="card" id="orderForm">
-<label class="label">📍 من وين - مقاطعتك الحالية</label>
-<select id="pickM"><option value="">اختر المقاطعة...</option><option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>دار النعيم</option><option>الرياض</option><option>الميناء</option><option>السبخة</option></select>
-<input id="pickArea" placeholder="اكتب الحي أو الشارع - سيقترح لك مثل Google" autocomplete="off">
+<label class="label">الاسم الكامل *</label><input id="cName" placeholder="اسمك الكامل"><label class="label">رقم الهاتف *</label><input id="cPhone" placeholder="رقم الهاتف">
+
+<label class="label">نوع السيارة المطلوبة *</label>
+<div class="vehicles">
+<div class="v-card v-taxi" data-v="تاكسي">🚕<br><b>تاكسي</b><br><small>100 MRU</small></div>
+<div class="v-card v-wawa selected" data-v="واوا">🛻<br><b>واوا</b><br><small>150 MRU</small></div>
+<div class="v-card v-med" data-v="شاحنة متوسطة 3 طن">🚚<br><b>شاحنة 3 طن</b><br><small>600 MRU</small></div>
+<div class="v-card v-big" data-v="شاحنة كبيرة 10 طن">🚛<br><b>شاحنة 10 طن</b><br><small>1000 MRU</small></div>
+</div>
+
+<label class="label">🔢 العدد المطلوب من نفس الوسيلة *</label><div class="qty-box"><button class="qty-btn" onclick="changeQty(-1)">-</button><div class="qty-num" id="qtyNum">1 مركبة</div><button class="qty-btn" onclick="changeQty(1)">+</button></div><input type="hidden" id="vehicleQty" value="1">
+
+<label class="label">نوع البضاعة *</label><select id="gType"><option value="">اختر نوع البضاعة...</option><option>أثاث منزلي</option><option>مواد غذائية</option><option>مستندات وأوراق</option><option>أجهزة إلكترونية</option><option>مواد بناء</option><option>أخرى</option></select>
+<label class="label">وصف البضاعة بالتفصيل *</label><textarea id="gDesc" rows="3" placeholder="مثلا: ثلاجة وغسالة..."></textarea>
+
+<label class="label" style="color:#0a3d62">📍 المنطقة المتواجد فيها - نواكشوط *</label>
+<label class="label">اختيار المقاطعة الحالية</label><select id="pickM"><option value="">اختر مقاطعتك الحالية...</option><option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>دار النعيم</option><option>الرياض</option><option>الميناء</option><option>السبخة</option></select>
+<input id="pickArea" placeholder="اكتب الحي - مثل Google سيقترح لك" autocomplete="off">
 <div id="suggestPick" class="suggest-box"></div>
 
-<label class="label">🎯 إلى وين - مقاطعة الوجهة</label>
-<select id="destM"><option value="">اختر مقاطعة الوجهة...</option><option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>دار النعيم</option><option>الرياض</option><option>الميناء</option><option>السبخة</option></select>
-<input id="destArea" placeholder="اكتب حي الوجهة - سيقترح لك" autocomplete="off">
+<label class="label" style="color:#e67e22">🎯 المنطقة المتوجه إليها - نواكشوط فقط *</label>
+<label class="label">اختيار مقاطعة الوجهة</label><select id="destM"><option value="">اختر مقاطعة الوجهة...</option><option>تفرغ زينة</option><option>لكصر</option><option>تيارت</option><option>توجنين</option><option>عرفات</option><option>دار النعيم</option><option>الرياض</option><option>الميناء</option><option>السبخة</option></select>
+<input id="destArea" placeholder="اكتب حي الوجهة - سيقترح لك مثل Google" autocomplete="off">
 <div id="suggestDest" class="suggest-box"></div>
 
-<label class="label">نوع السيارة</label>
-<div class="vehicles">
-<div class="v-card selected" data-v="واوا">🛻<br><b>واوا</b><br>150 MRU</div>
-<div class="v-card" data-v="تاكسي">🚕<br><b>تاكسي</b><br>100 MRU</div>
-<div class="v-card" data-v="شاحنة متوسطة 3 طن">🚚<br><b>3 طن</b><br>600 MRU</div>
-<div class="v-card" data-v="شاحنة كبيرة 10 طن">🚛<br><b>10 طن</b><br>1000 MRU</div>
-</div>
-<div class="qty-box"><button class="qty-btn" onclick="changeQty(-1)">-</button><div class="qty-num" id="qtyNum">1 مركبة</div><button class="qty-btn" onclick="changeQty(1)">+</button></div>
-
-<div id="routeInfo" class="route-info" style="display:none"></div>
-<div class="price" id="priceBox">💰 اكتب العنوانين ليظهر الطريق</div>
+<div id="routeInfo" class="route-info"></div>
+<div class="price" id="priceBox">💰 مبلغ الرحلة: 150 MRU<br><small>اكتب الحي وسيظهر الطريق الأزرق والمسافة</small></div>
 </div>
 
-<div class="card"><div id="map"></div><p id="mapStatus" style="text-align:center;color:#1a73e8">اكتب الحي وسيظهر المسار الأزرق مثل Google Maps</p></div>
-<button class="btn" id="sendBtn">✅ إرسال الطلب</button><div id="msg"></div>
+<div class="card" id="mapCard"><label class="label">🗺️ الخريطة - تتعرف تلقائيا + ترسم الطريق مثل Google Maps</label><div id="map"></div><p id="mapStatus" style="text-align:center;font-weight:bold;color:#1a73e8">⏳ اكتب مقاطعتك والحي - سيقترح لك ويضع الدبوس تلقائيا</p><p id="destMapStatus" style="text-align:center;font-size:13px;color:#e67e22">عند كتابة الوجهة سيرسم الطريق الأزرق</p><button class="btn btn-gps" id="retryBtn" style="display:none" onclick="requestLocation()">📡 شغل GPS لتحديد موقعك تلقائيا</button><button class="btn btn-dest" id="setDestBtn" onclick="enableDestMode()">🎯 أو اضغط هنا لتحديد الوجهة يدويا على الخريطة</button></div>
 
-<script>function doLogin(){let n=loginName.value.trim(),p=loginPhone.value.trim();if(n.length<3)return alert('الاسم');if(p.length<8)return alert('هاتف');localStorage.setItem('naqli_name',n);localStorage.setItem('naqli_phone',p);loginOverlay.style.display='none';}</script>
+<button class="btn" id="sendBtn">✅ إرسال الطلب الآن - نواكشوط</button><button class="btn btn-cancel" id="cancelBtn" style="display:none">❌ إلغاء الطلب الحالي</button><div id="msg"></div>
+
+<script>function doLogin(){let n=document.getElementById('loginName').value.trim(),p=document.getElementById('loginPhone').value.trim();if(n.length<3)return alert('أدخل اسمك الكامل');if(p.length<8)return alert('رقم الهاتف غير صحيح');localStorage.setItem('naqli_name',n);localStorage.setItem('naqli_phone',p);document.getElementById('loginOverlay').style.display='none';document.getElementById('cName').value=n;document.getElementById('cPhone').value=p;}(function(){let a=localStorage.getItem('naqli_name'),b=localStorage.getItem('naqli_phone');if(a&&b){document.getElementById('loginOverlay').style.display='none';}})();</script>
+
 <script type="module">
 import { db } from "./firebase.js";
-import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, addDoc, deleteDoc, doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 const prices={"تاكسي":100,"واوا":150,"شاحنة متوسطة 3 طن":600,"شاحنة كبيرة 10 طن":1000};
-let selVehicle="واوا", vehicleQuantity=1, userLatLng=null, destLatLng=null, map, marker, destMarker, routeLine=null;
-const pickMEl=document.getElementById('pickM'), pickAreaEl=document.getElementById('pickArea'), destMEl=document.getElementById('destM'), destAreaEl=document.getElementById('destArea');
-const suggestPickEl=document.getElementById('suggestPick'), suggestDestEl=document.getElementById('suggestDest'), priceBoxEl=document.getElementById('priceBox'), routeInfoEl=document.getElementById('routeInfo'), mapStatusEl=document.getElementById('mapStatus');
-window.changeQty=(d)=>{vehicleQuantity=Math.max(1,Math.min(10,vehicleQuantity+d)); document.getElementById('qtyNum').textContent=vehicleQuantity+" مركبة"; calcPrice();};
+let selVehicle="واوا", userLatLng=null, destLatLng=null, lastId=localStorage.getItem('naqli_lastId'), currentOrderId=lastId;
+let map, marker, destMarker, trackMap, driverMarker, customerMarker, destTrackMarker, unsub=null, currentDriverPos=null, routeLine=null;
+let vehicleQuantity=1; let destMode=false;
+const priceBoxEl=document.getElementById('priceBox'); const mapStatusEl=document.getElementById('mapStatus'); const destMapStatusEl=document.getElementById('destMapStatus'); const retryBtnEl=document.getElementById('retryBtn'); const msgEl=document.getElementById('msg'); const routeInfoEl=document.getElementById('routeInfo');
+const cNameEl=document.getElementById('cName'); const cPhoneEl=document.getElementById('cPhone'); const gTypeEl=document.getElementById('gType'); const gDescEl=document.getElementById('gDesc'); const pickMEl=document.getElementById('pickM'); const pickAreaEl=document.getElementById('pickArea'); const destMEl=document.getElementById('destM'); const destAreaEl=document.getElementById('destArea'); const qtyEl=document.getElementById('vehicleQty'); const qtyNumEl=document.getElementById('qtyNum'); const suggestPickEl=document.getElementById('suggestPick'); const suggestDestEl=document.getElementById('suggestDest');
+
+window.changeQty=(delta)=>{vehicleQuantity=Math.max(1,Math.min(10,vehicleQuantity+delta)); qtyEl.value=vehicleQuantity; qtyNumEl.textContent=vehicleQuantity+(vehicleQuantity==1?" مركبة":" مركبات"); calcPrice();};
 document.querySelectorAll('.v-card').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.v-card').forEach(x=>x.classList.remove('selected')); c.classList.add('selected'); selVehicle=c.dataset.v; calcPrice();}));
 
-// --- Autocomplete مثل Google ---
+// === ميزة Google Maps: اقتراح الأماكن ===
 async function fetchSuggestions(query, muqataa){
   let q = (query?query+", ":"") + (muqataa?muqataa+", ":"") + "Nouakchott, Mauritania";
-  let url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(q)}&countrycodes=mr`;
-  let res = await fetch(url); let data = await res.json(); return data;
+  try{
+    let url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(q)}&countrycodes=mr&addressdetails=1`;
+    let res = await fetch(url); let data = await res.json(); return data;
+  }catch(e){ return []; }
 }
 function showSuggestions(data, boxEl, inputEl, isDest){
-  boxEl.innerHTML=""; if(!data.length){boxEl.style.display="none"; return;}
+  boxEl.innerHTML=""; if(!data || !data.length){boxEl.style.display="none"; return;}
   data.forEach(place=>{
-    let div=document.createElement('div'); div.className="suggest-item"; div.textContent=place.display_name.substring(0,80);
-    div.onclick=()=>{ inputEl.value=place.display_name.split(',')[0]; boxEl.style.display="none"; setLocationFromPlace(place, isDest); };
+    let div=document.createElement('div'); div.className="suggest-item"; div.textContent="📍 "+place.display_name.substring(0,90);
+    div.onclick=()=>{ inputEl.value=place.display_name.split(',')[0].trim(); boxEl.style.display="none"; setLocationFromPlace(place, isDest); };
     boxEl.appendChild(div);
   });
   boxEl.style.display="block";
 }
 function setLocationFromPlace(place, isDest){
   let ll=L.latLng(parseFloat(place.lat), parseFloat(place.lon));
-  if(isDest){ destLatLng=ll; if(destMarker) map.removeLayer(destMarker); destMarker=L.marker(ll,{icon:L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', iconSize:[25,41]})}).addTo(map).bindPopup("🎯 "+place.display_name).openPopup();}
-  else{ userLatLng=ll; if(marker) map.removeLayer(marker); marker=L.marker(ll).addTo(map).bindPopup("📍 "+place.display_name).openPopup(); map.setView(ll,14);}
-  drawRoute();
+  if(isDest){
+    destLatLng=ll;
+    if(destMarker) map.removeLayer(destMarker);
+    destMarker=L.marker(ll,{draggable:true, icon:L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png', iconSize:[25,41], iconAnchor:[12,41]})}).addTo(map).bindPopup("🎯 الوجهة: "+place.display_name.substring(0,60)).openPopup();
+    destMarker.on('dragend', e=>{ destLatLng=e.target.getLatLng(); drawRoute(); });
+    destMapStatusEl.textContent="✅ تم تحديد الوجهة: "+place.display_name.substring(0,50); destMapStatusEl.style.color="green";
+    if(userLatLng) drawRoute(); else map.setView(ll,14);
+  } else {
+    userLatLng=ll;
+    if(marker) map.removeLayer(marker);
+    marker=L.marker(ll,{draggable:true}).addTo(map).bindPopup("📍 موقعك: "+place.display_name.substring(0,60)).openPopup();
+    marker.on('dragend', e=>{ userLatLng=e.target.getLatLng(); drawRoute(); });
+    mapStatusEl.textContent="✅ تم تحديد موقعك: "+place.display_name.substring(0,50); mapStatusEl.style.color="green";
+    map.setView(ll,14);
+    if(destLatLng) drawRoute();
+  }
+  calcPrice();
 }
 let timerPick, timerDest;
-pickAreaEl.addEventListener('input', ()=>{ clearTimeout(timerPick); timerPick=setTimeout(async()=>{ if(pickAreaEl.value.length>2){ let s=await fetchSuggestions(pickAreaEl.value, pickMEl.value); showSuggestions(s, suggestPickEl, pickAreaEl, false); } }, 500); });
-destAreaEl.addEventListener('input', ()=>{ clearTimeout(timerDest); timerDest=setTimeout(async()=>{ if(destAreaEl.value.length>2){ let s=await fetchSuggestions(destAreaEl.value, destMEl.value); showSuggestions(s, suggestDestEl, destAreaEl, true); } }, 500); });
-pickMEl.addEventListener('change', async()=>{ if(pickMEl.value){ let s=await fetchSuggestions("", pickMEl.value); if(s[0]) setLocationFromPlace(s[0], false); } });
-destMEl.addEventListener('change', async()=>{ if(destMEl.value){ let s=await fetchSuggestions("", destMEl.value); if(s[0]) setLocationFromPlace(s[0], true); } });
+pickAreaEl.addEventListener('input', ()=>{ clearTimeout(timerPick); timerPick=setTimeout(async()=>{ if(pickAreaEl.value.length>=2){ let s=await fetchSuggestions(pickAreaEl.value, pickMEl.value); showSuggestions(s, suggestPickEl, pickAreaEl, false); } else suggestPickEl.style.display="none"; }, 400); });
+destAreaEl.addEventListener('input', ()=>{ clearTimeout(timerDest); timerDest=setTimeout(async()=>{ if(destAreaEl.value.length>=2){ let s=await fetchSuggestions(destAreaEl.value, destMEl.value); showSuggestions(s, suggestDestEl, destAreaEl, true); } else suggestDestEl.style.display="none"; }, 400); });
+pickMEl.addEventListener('change', async()=>{ if(pickMEl.value){ let s=await fetchSuggestions("", pickMEl.value); if(s && s[0]) setLocationFromPlace(s[0], false); } });
+destMEl.addEventListener('change', async()=>{ if(destMEl.value){ let s=await fetchSuggestions("", destMEl.value); if(s && s[0]) setLocationFromPlace(s[0], true); } });
 
-// --- رسم الطريق الأزرق مثل Google Maps ---
+// === رسم الطريق الأزرق مثل Google Maps ===
 async function drawRoute(){
-  if(!userLatLng || !destLatLng) return;
+  if(!userLatLng || !destLatLng || !map) return;
   try{
-    // OSRM لرسم الطريق الحقيقي
     let url = `https://router.project-osrm.org/route/v1/driving/${userLatLng.lng},${userLatLng.lat};${destLatLng.lng},${destLatLng.lat}?overview=full&geometries=geojson`;
     let res = await fetch(url); let data = await res.json();
     if(data.routes && data.routes[0]){
@@ -108,36 +154,62 @@ async function drawRoute(){
       let distanceKm = (route.distance/1000).toFixed(2);
       let durationMin = Math.round(route.duration/60);
       let coords = route.geometry.coordinates.map(c=>L.latLng(c[1], c[0]));
-      
       if(routeLine) map.removeLayer(routeLine);
-      routeLine = L.polyline(coords, {color:'#1a73e8', weight:6, opacity:0.8}).addTo(map);
-      map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
-      
+      routeLine = L.polyline(coords, {color:'#1a73e8', weight:6, opacity:0.9}).addTo(map);
+      map.fitBounds(routeLine.getBounds(), {padding:[50,50]});
       routeInfoEl.style.display="block";
-      routeInfoEl.innerHTML=`🛣️ الطريق: <b>${distanceKm} كم</b> | ⏱️ الوقت: <b>${durationMin} دقيقة</b><br>📍 من ${pickMEl.value} إلى ${destMEl.value}`;
-      
+      routeInfoEl.innerHTML=`🛣️ <b>المسار مرسوم مثل Google Maps</b><br>📏 المسافة عبر الطريق: <b>${distanceKm} كم</b> | ⏱️ الوقت: <b>${durationMin} دقيقة</b><br>📍 من ${pickMEl.value} ${pickAreaEl.value} → إلى ${destMEl.value} ${destAreaEl.value}`;
       let extra = Math.round(parseFloat(distanceKm)*12);
       let total = (prices[selVehicle]*vehicleQuantity)+extra;
-      priceBoxEl.innerHTML=`📏 المسافة الحقيقية عبر الطريق: ${distanceKm} كم<br>⏱️ ${durationMin} دقيقة<br>💰 المبلغ: <b>${total} MRU</b> - ${selVehicle} × ${vehicleQuantity}`;
-      mapStatusEl.textContent=`✅ تم رسم المسار الأزرق - ${distanceKm} كم`;
+      priceBoxEl.innerHTML=`📏 المسافة الحقيقية: <b>${distanceKm} كم</b><br>⏱️ <b>${durationMin} دقيقة</b><br>💰 المبلغ: <b>${total} MRU</b> - ${selVehicle} × ${vehicleQuantity} ${extra?`(+${extra} مسافة)`:''}`;
+      mapStatusEl.textContent=`✅ الطريق الأزرق مرسوم - ${distanceKm} كم`;
+      return;
     }
-  }catch(e){ console.log(e); // fallback خط مستقيم
-    if(routeLine) map.removeLayer(routeLine);
-    routeLine = L.polyline([userLatLng, destLatLng], {color:'#1a73e8', weight:4, dashArray:'10,10'}).addTo(map);
-    let dist = map.distance(userLatLng, destLatLng)/1000;
-    routeInfoEl.style.display="block";
-    routeInfoEl.innerHTML=`📏 مسافة مباشرة: ${dist.toFixed(2)} كم (لا يوجد طريق)`;
-    calcPrice();
-  }
+  }catch(e){ console.log(e); }
+  // fallback خط مستقيم
+  if(routeLine) map.removeLayer(routeLine);
+  routeLine = L.polyline([userLatLng, destLatLng], {color:'#1a73e8', weight:5, dashArray:'12,12'}).addTo(map);
+  map.fitBounds(routeLine.getBounds(), {padding:[50,50]});
+  calcPrice();
 }
-function calcPrice(){ if(userLatLng && destLatLng && map){ let d=map.distance(userLatLng,destLatLng)/1000; let total=(prices[selVehicle]*vehicleQuantity)+Math.round(d*12); priceBoxEl.innerHTML=`💰 ${total} MRU - ${d.toFixed(1)} كم`; return total;} return prices[selVehicle]*vehicleQuantity; }
-function initMap(){ map=L.map('map').setView([18.0735,-15.9582],12); L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{maxZoom:20,subdomains:['mt0','mt1','mt2','mt3']}).addTo(map); map.on('click',e=>{ if(!userLatLng){ userLatLng=e.latlng; if(marker) map.removeLayer(marker); marker=L.marker(e.latlng).addTo(map).bindPopup("📍 من هنا").openPopup(); } else { destLatLng=e.latlng; if(destMarker) map.removeLayer(destMarker); destMarker=L.marker(e.latlng,{icon:L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', iconSize:[25,41]})}).addTo(map).bindPopup("🎯 إلى هنا").openPopup(); drawRoute(); } }); setTimeout(()=>map.invalidateSize(),800); }
-window.addEventListener('load',initMap);
-document.getElementById('sendBtn').onclick=async()=>{
-  if(!userLatLng||!destLatLng) return alert("حدد العنوانين - سيقترح لك مثل Google");
-  let data={name:localStorage.getItem('naqli_name')||'زبون', phone:localStorage.getItem('naqli_phone')||'', vehicle:selVehicle, vehicleQuantity:vehicleQuantity, fromMuqataa:pickMEl.value, pickArea:pickAreaEl.value, toMuqataa:destMEl.value, destArea:destAreaEl.value, customerLat:userLatLng.lat, customerLng:userLatLng.lng, destLat:destLatLng.lat, destLng:destLatLng.lng, lat:userLatLng.lat, lng:userLatLng.lng, price:calcPrice(), status:"new", createdAt:new Date()};
-  await addDoc(collection(db,"requests"),data); alert("✅ تم الإرسال - المسار مرسوم");
-};
-</script>
-</body>
-</html>
+function calcPrice(){
+  let base=prices[selVehicle]; let dist=0; if(userLatLng && destLatLng && map){ dist=map.distance(userLatLng, destLatLng)/1000; } let extra=Math.round(dist*12); let total=(base*vehicleQuantity)+extra;
+  if(dist>0 && !routeInfoEl.style.display || routeInfoEl.style.display=='none'){ priceBoxEl.innerHTML=`📏 مسافة مباشرة: <b>${dist.toFixed(2)} كم</b><br>💰 المبلغ: <b>${total} MRU</b> - ${selVehicle} × ${vehicleQuantity}`; }
+  else if(dist==0){ priceBoxEl.innerHTML=`💰 مبلغ الرحلة: <b>${total} MRU</b> - ${selVehicle} × ${vehicleQuantity}<br><small>اكتب الحي ليظهر الطريق</small>`; }
+  return total;
+}
+function initMap(){
+  map=L.map('map').setView([18.0735,-15.9582],12);
+  L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{maxZoom:20,subdomains:['mt0','mt1','mt2','mt3']}).addTo(map);
+  map.on('click',e=>{
+    if(destMode){
+      destLatLng=e.latlng; if(destMarker) map.removeLayer(destMarker);
+      destMarker=L.marker(e.latlng,{draggable:true, icon:L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', iconSize:[25,41], iconAnchor:[12,41]})}).addTo(map).bindPopup("🎯 الوجهة").openPopup();
+      destMarker.on('dragend', ev=>{ destLatLng=ev.target.getLatLng(); drawRoute(); });
+      destMapStatusEl.textContent="✅ تم تحديد الوجهة يدويا"; destMode=false; document.getElementById('setDestBtn').textContent="🎯 تم تحديد الوجهة - اضغط لتغييرها"; drawRoute();
+    } else {
+      if(!userLatLng){ userLatLng=e.latlng; if(marker) map.removeLayer(marker); marker=L.marker(e.latlng,{draggable:true}).addTo(map).bindPopup("📍 أنت هنا").openPopup(); marker.on('dragend', ev=>{ userLatLng=ev.target.getLatLng(); drawRoute(); }); mapStatusEl.textContent="✅ تم تحديد موقعك يدويا - الآن حدد الوجهة"; }
+      else if(!destLatLng){ destLatLng=e.latlng; if(destMarker) map.removeLayer(destMarker); destMarker=L.marker(e.latlng,{draggable:true, icon:L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', iconSize:[25,41]})}).addTo(map).bindPopup("🎯 الوجهة").openPopup(); destMarker.on('dragend', ev=>{ destLatLng=ev.target.getLatLng(); drawRoute(); }); drawRoute(); }
+      else { userLatLng=e.latlng; if(marker) map.removeLayer(marker); marker=L.marker(e.latlng,{draggable:true}).addTo(map).bindPopup("📍 أنت هنا").openPopup(); drawRoute(); }
+    }
+  });
+  setTimeout(()=>map.invalidateSize(),800);
+  if(currentOrderId) startListening(currentOrderId);
+  setTimeout(()=>window.requestLocation(),1200);
+}
+window.enableDestMode=()=>{destMode=true; destMapStatusEl.textContent="👆 الآن اضغط على الخريطة لتحديد وجهتك - سيرسم الطريق"; destMapStatusEl.style.color="#e67e22"; document.getElementById('setDestBtn').textContent="👆 اضغط على الخريطة الآن";};
+window.requestLocation=()=>{
+  if(!navigator.geolocation){ mapStatusEl.textContent="❌ جهازك لا يدعم GPS"; return; }
+  mapStatusEl.textContent="⏳ جاري تحديد موقعك تلقائيا..."; retryBtnEl.style.display="none";
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    userLatLng=L.latLng(pos.coords.latitude, pos.coords.longitude);
+    if(marker) map.removeLayer(marker);
+    marker=L.marker(userLatLng,{draggable:true}).addTo(map).bindPopup("📍 أنت هنا - GPS").openPopup();
+    marker.on('dragend', e=>{ userLatLng=e.target.getLatLng(); drawRoute(); });
+    map.setView(userLatLng,15);
+    mapStatusEl.textContent="✅ تم تحديد موقعك GPS"; mapStatusEl.style.color="green";
+    try{
+      let res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+      let data = await res.json();
+      if(data && data.display_name){ mapStatusEl.textContent="✅ GPS: "+data.display_name.substring(0,70); }
+      if(data.address){ let sub=data.
