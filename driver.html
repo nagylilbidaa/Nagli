@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -74,12 +75,13 @@ input,select{width:100%;padding:13px;border:1.5px solid #e5e7eb;border-radius:11
 
 <script type="module">
 import { db } from "./firebase.js";
-import { collection, query, where, getDocs, getDoc, doc, updateDoc, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, query, where, getDocs, getDoc, doc, updateDoc, addDoc, onSnapshot, arrayUnion, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const auth = getAuth();
 let curDriver=null, map=null, driverMarker=null, custMarker=null, trackingInterval=null, lastOrderCount=0, soundEnabled=false;
 let confirmationResult=null, routeLine=null;
+let driverLatLng=null;
 
 window.enableSound=()=>{
   soundEnabled=true;
@@ -103,9 +105,18 @@ loginBtn.onclick=async()=>{
   if(snap.empty) return alert("رقم أو كلمة سر خاطئة");
   if(snap.docs[0].data().status!="approved") return alert("⏳ بانتظار الموافقة");
   curDriver={id:snap.docs[0].id,...snap.docs[0].data()};
+  // حفظ كل معلومات السائق للزبون
+  localStorage.setItem('driver_name', curDriver.name);
+  localStorage.setItem('driver_phone', curDriver.phone);
+  localStorage.setItem('driver_vehicle', curDriver.vehicle);
+  localStorage.setItem('driver_plate', curDriver.plate||'');
+  localStorage.setItem('plateNumber', curDriver.plate||'');
+  localStorage.setItem('driver_photo', curDriver.photoBase64||'');
+  localStorage.setItem('photoUrl', curDriver.photoBase64||'');
   loginPass.value=""; loginCard.style.display='none';
-  driverInfo.innerHTML=`<div class="card" style="border:2px solid #27ae60"><b>مرحبا ${curDriver.name}</b> - ${curDriver.vehicle} ✅<br><small>ربحك 90% - عمولة 10%</small></div>`;
+  driverInfo.innerHTML=`<div class="card" style="border:2px solid #27ae60"><b>مرحبا ${curDriver.name}</b> - ${curDriver.vehicle} ✅<br>🔢 ${curDriver.plate||''}<br><small>ربحك 90% - عمولة 10%</small></div>`;
   listenOrders(); initMap();
+  if(navigator.geolocation){ navigator.geolocation.getCurrentPosition(p=>{ driverLatLng={lat:p.coords.latitude,lng:p.coords.longitude}; }); }
 };
 
 // SMS استرجاع
@@ -152,23 +163,51 @@ function initMap(){
 }
 
 function listenOrders(){
-  let q=query(collection(db,"requests"),where("vehicle","==",curDriver.vehicle),where("status","==","new"));
+  let q=query(collection(db,"requests"),where("vehicle","==",curDriver.vehicle));
   onSnapshot(q, snap=>{
     let h="";
-    if(snap.size>lastOrderCount && lastOrderCount!==0 && soundEnabled){
-      document.getElementById('orderSound').play();
-      if(Notification.permission==="granted"){ new Notification("🚚 طلب جديد!", {body:`${snap.docs[0]?.data().mouqataa}`}); }
-      if(navigator.vibrate) navigator.vibrate([400,100,400]);
-    }
-    lastOrderCount=snap.size;
-    document.getElementById('notifCount').style.display=snap.size>0?'inline':'none';
-    document.getElementById('notifCount').textContent=snap.size;
+    let filtered=[];
     snap.forEach(s=>{
       let o=s.data();
-      let profit=Math.round(o.price*0.90), comm=Math.round(o.price*0.10);
-      h+=`<div class="card new-order-anim"><b>${o.mouqataa} → ${o.destArea}</b><br>${o.goodsDesc||''}<br>💰 ${o.price} MRU | <b style="color:#27ae60">ربحك ${profit} (90%)</b> عمولة ${comm}<br><small>${o.name}</small><br><button class="btn btn-green" onclick="acceptOrder('${s.id}')">✅ قبول</button><button class="btn" style="background:#eee;color:#333" onclick="rejectOrder('${s.id}')">❌ رفض</button><button class="btn btn-blue" onclick="showCustOnMap(${o.customerLat},${o.customerLng})">🗺️ موقع الزبون بالضبط</button></div>`;
+      if(o.status==="completed") return;
+      let required=o.requiredVehicles||o.vehicleQuantity||1;
+      let accepted=o.acceptedCount|| (o.acceptedDrivers?o.acceptedDrivers.length:0);
+      if(accepted>=required) return; // اكتمل العدد
+      if(o.rejectedDrivers && o.rejectedDrivers.includes(curDriver.phone)) return;
+      if(o.acceptedDrivers && o.acceptedDrivers.some(d=>d.phone===curDriver.phone)) return;
+      if(o.driverId && o.driverId===curDriver.id && required<=1) return;
+      filtered.push({id:s.id, data:o});
     });
-    orders.innerHTML=h||"<div class='card' style='text-align:center;color:#888'>لا يوجد طلبات</div>";
+
+    if(filtered.length>lastOrderCount && lastOrderCount!==0 && soundEnabled){
+      document.getElementById('orderSound').play();
+      if(Notification.permission==="granted"){ new Notification("🚚 طلب جديد!", {body:`${filtered[0]?.data.pickMuqataaHay||filtered[0]?.data.mouqataa}`}); }
+      if(navigator.vibrate) navigator.vibrate([400,100,400]);
+    }
+    lastOrderCount=filtered.length;
+    document.getElementById('notifCount').style.display=filtered.length>0?'inline':'none';
+    document.getElementById('notifCount').textContent=filtered.length;
+    
+    filtered.forEach(item=>{
+      let o=item.data;
+      let profit=Math.round(o.price*0.90), comm=Math.round(o.price*0.10);
+      let required=o.requiredVehicles||o.vehicleQuantity||1;
+      let accepted=o.acceptedCount||0;
+      let pickFull=o.pickMuqataaHay||`${o.fromMuqataa||o.mouqataa||''} - ${o.pickArea||''}`;
+      let destFull=o.destMuqataaHay||`${o.toMuqataa||o.destMuqataa||''} - ${o.destArea||''}`;
+      h+=`<div class="card new-order-anim" style="border-right:5px solid #0a3d62">
+      <div style="background:#0a1931;color:#fff;padding:8px;border-radius:10px;text-align:center">🚚 مطلوب <b>${required}</b> | ✅ قبل <b>${accepted}</b> | ⏳ باقي <b>${required-accepted}</b></div>
+      <div style="margin-top:10px">
+      <div style="background:#e8f5e9;padding:8px;border-radius:8px"><b>📍 التواجد (استلام):</b><br>${pickFull}</div>
+      <div style="background:#ffebee;padding:8px;border-radius:8px;margin-top:6px"><b>🎯 الوجهة (تسليم):</b><br>${destFull}</div>
+      </div>
+      <div style="margin-top:8px">👤 ${o.name} - ${o.phone}<br>📦 ${o.goodsType||''} - ${o.goodsDesc||''}<br>📏 ${o.distanceKm||0} كم<br>💰 ${o.price} MRU | <b style="color:#27ae60">ربحك ${profit} (90%)</b> عمولة ${comm}</div>
+      <button class="btn btn-green" onclick="acceptOrder('${item.id}')">✅ قبول - سأكون سائق ${accepted+1}</button>
+      <button class="btn" style="background:#e74c3c" onclick="rejectOrder('${item.id}')">❌ رفض نهائي</button>
+      <button class="btn btn-blue" onclick="showCustOnMap(${o.customerLat||o.fromLat||o.lat},${o.customerLng||o.fromLng||o.lng})">🗺️ موقع الزبون بالضبط</button>
+      </div>`;
+    });
+    orders.innerHTML=h||"<div class='card' style='text-align:center;color:#888'>لا يوجد طلبات - كل الطلبات مكتملة أو رفضتها</div>";
   });
 }
 
@@ -181,25 +220,75 @@ window.showCustOnMap=(lat,lng)=>{
   map.setView([lat,lng],16);
 }
 
-window.rejectOrder=async(id)=>{ await updateDoc(doc(db,"requests",id),{rejectedBy:curDriver.id}); }
+window.rejectOrder=async(id)=>{
+  if(!confirm("هل تريد رفض هذا الطلب نهائيا؟ لن يظهر لك مرة أخرى")) return;
+  await updateDoc(doc(db,"requests",id),{rejectedDrivers: arrayUnion(curDriver.phone)});
+  alert("تم الرفض - لن يظهر لك هذا الطلب مرة أخرى");
+}
 
 window.acceptOrder=async(id)=>{
   document.getElementById('orderSound').pause();
-  let ref=doc(db,"requests",id); let snap=await getDoc(ref); let o=snap.data();
-  await updateDoc(ref,{status:"accepted",driverId:curDriver.id,driverName:curDriver.name,driverPhone:curDriver.phone,progress:50,acceptedAt:new Date()});
+  let ref=doc(db,"requests",id); 
+  let snap=await getDoc(ref); 
+  if(!snap.exists()) return alert("الطلب غير موجود");
+  let o=snap.data();
+  let required=o.requiredVehicles||o.vehicleQuantity||1;
+  let accepted=o.acceptedCount|| (o.acceptedDrivers?o.acceptedDrivers.length:0);
+
+  if(o.acceptedDrivers && o.acceptedDrivers.some(d=>d.phone===curDriver.phone)){
+    return alert("✅ أنت قبلت هذا الطلب من قبل");
+  }
+  if(o.rejectedDrivers && o.rejectedDrivers.includes(curDriver.phone)){
+    return alert("❌ أنت رفضت هذا الطلب من قبل");
+  }
+  if(accepted>=required){
+    return alert(`❌ اكتمل العدد - مطلوب ${required} وتم قبول ${accepted}`);
+  }
+
+  let driverInfo={
+    id: curDriver.phone,
+    name: curDriver.name,
+    phone: curDriver.phone,
+    vehicle: curDriver.vehicle,
+    vehicleType: curDriver.vehicle,
+    plateNumber: curDriver.plate||'',
+    plate: curDriver.plate||'',
+    photoUrl: curDriver.photoBase64||'',
+    photoBase64: curDriver.photoBase64||'',
+    lat: driverLatLng?.lat||null,
+    lng: driverLatLng?.lng||null,
+    acceptedAt: new Date()
+  };
+
+  await updateDoc(ref,{
+    acceptedDrivers: arrayUnion(driverInfo),
+    acceptedCount: increment(1),
+    driverId: curDriver.id,
+    driverName: curDriver.name,
+    driverPhone: curDriver.phone,
+    driverLat: driverLatLng?.lat||o.customerLat,
+    driverLng: driverLatLng?.lng||o.customerLng,
+    status: (accepted+1)>=required ? "accepted" : "partially_accepted",
+    progress: 50,
+    acceptedAt: new Date()
+  });
+
   let profit=Math.round(o.price*0.90);
   acceptedOrder.innerHTML=`
-  <div style="background:#27ae60;color:#fff;padding:14px;border-radius:12px;text-align:center">✅ تم القبول - ربحك ${profit} MRU</div>
+  <div style="background:#27ae60;color:#fff;padding:14px;border-radius:12px;text-align:center">✅ تم القبول - أنت سائق ${accepted+1} من ${required} - ربحك ${profit} MRU</div>
   <div class="card" style="border:2px solid #27ae60">
   <div style="font-size:24px;text-align:center;direction:ltr">${o.phone}</div>
-  <p><b>العميل:</b> ${o.name}</p><p><b>من:</b> ${o.mouqataa} <b>إلى:</b> ${o.destArea}</p>
+  <p><b>العميل:</b> ${o.name}</p>
+  <p><b>📍 من:</b> ${o.pickMuqataaHay||o.fromMuqataa+' - '+o.pickArea}</p>
+  <p><b>🎯 إلى:</b> ${o.destMuqataaHay||o.toMuqataa+' - '+o.destArea}</p>
+  <p><b>📦:</b> ${o.goodsType} - ${o.goodsDesc}</p>
   <a href="tel:${o.phone}"><button class="btn btn-blue">📞 اتصال</button></a>
   <a href="https://wa.me/${o.phone.replace(/[^0-9]/g,'')}" target="_blank"><button class="btn btn-whats">💬 واتساب</button></a>
-  <button class="btn btn-blue" onclick="showCustOnMap(${o.customerLat},${o.customerLng})">🗺️ موقع الزبون بالضبط على الخريطة</button>
+  <button class="btn btn-blue" onclick="showCustOnMap(${o.customerLat||o.fromLat},${o.customerLng||o.fromLng})">🗺️ موقع الزبون بالضبط على الخريطة</button>
   <button class="btn btn-orange" onclick="updateProgress('${id}','on_the_way')">🚚 أنا في الطريق</button>
   <button class="btn btn-green" onclick="updateProgress('${id}','completed')">✅ تم التوصيل</button>
   </div>`;
-  orders.innerHTML=""; showCustOnMap(o.customerLat,o.customerLng); startTracking(id);
+  orders.innerHTML=""; showCustOnMap(o.customerLat||o.fromLat,o.customerLng||o.fromLng); startTracking(id);
 };
 
 window.updateProgress=async(id,st)=>{
@@ -212,14 +301,14 @@ function startTracking(orderId){
   if(trackingInterval) clearInterval(trackingInterval);
   trackingInterval=setInterval(()=>{
     navigator.geolocation.getCurrentPosition(async pos=>{
+      driverLatLng={lat:pos.coords.latitude,lng:pos.coords.longitude};
       await updateDoc(doc(db,"requests",orderId),{driverLat:pos.coords.latitude,driverLng:pos.coords.longitude,lastUpdate:new Date()});
       if(driverMarker) map.removeLayer(driverMarker);
       driverMarker=L.marker([pos.coords.latitude,pos.coords.longitude]).addTo(map).bindPopup("موقعك").openPopup();
-      // رسم خط بينك وبين الزبون
       let snap=await getDoc(doc(db,"requests",orderId)); let o=snap.data();
-      if(o.customerLat){
+      if(o.customerLat||o.fromLat){
         if(routeLine) map.removeLayer(routeLine);
-        routeLine=L.polyline([[pos.coords.latitude,pos.coords.longitude],[o.customerLat,o.customerLng]],{color:'#0a3d62',dashArray:'8,8'}).addTo(map);
+        routeLine=L.polyline([[pos.coords.latitude,pos.coords.longitude],[o.customerLat||o.fromLat,o.customerLng||o.fromLng]],{color:'#0a3d62',dashArray:'8,8'}).addTo(map);
       }
     });
   },5000);
